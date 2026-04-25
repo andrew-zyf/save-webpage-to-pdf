@@ -2,12 +2,35 @@
    注意：因为 @page margin > 0，Chrome 打印对话框里"页眉和页脚"
    选项会出现，需要用户手动取消勾选（取消一次后 Chrome 会记住）。 */
 @page { size: A4 portrait; margin: 15mm 18mm 15mm 20mm; }
+@page :first { margin: 25mm 22mm; }
 
 @media print {
+  /* 强制浅色，避免站点 dark-mode 把背景印成深灰浪费墨 */
+  :root, html, body {
+    color-scheme: light !important;
+    background: #fff !important;
+    color: #111 !important;
+  }
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    background: #fff !important;
+  }
+  /* 长 URL / 长 token 在窄列内换行而不是被裁掉 */
+  a, code { word-break: break-word; overflow-wrap: anywhere; }
+  /* 代码块自动换行，避免横向溢出后右侧整段消失 */
+  pre, pre code {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    tab-size: 2;
+    font-size: 10.5px !important;
+    line-height: 1.45 !important;
+  }
+  pre {
+    border: 1px solid #ddd;
+    background: #fafafa !important;
+    padding: 8px 10px;
+    page-break-inside: auto;
   }
 
   /* 防止单行文本被横切：每页顶/底至少保留 3 行，
@@ -64,20 +87,61 @@
   /* 由 popup.js 标记的元素一律不打印（漂浮广告、sticky 工具栏、cookie 横幅等） */
   .a4lp-hide { display: none !important; }
 
-  /* ---- 注入卡片：SOURCE 横幅 / 作者卡 / 目录 ---- */
+  /* ---- 注入卡片：封面 / 作者卡 / 目录 ---- */
   .a4lp-source {
     font: 11px/1.5 -apple-system, system-ui, sans-serif !important;
-    color: #333 !important;
-    margin: 6px 0 14px !important;
+    color: #222 !important;
   }
-  .a4lp-source .a4lp-banner {
-    border-bottom: 1px solid #bbb;
-    padding: 0 0 6px;
-    margin-bottom: 10px;
+
+  /* 封面页：占满首页，结尾换页 */
+  .a4lp-cover {
+    page-break-after: always;
+    break-after: page;
+    min-height: 240mm;
+    padding: 30mm 0 10mm;
+    display: block;
+  }
+  .a4lp-cover-kicker {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 20mm;
+  }
+  .a4lp-cover-title {
+    font-size: 28px !important;
+    line-height: 1.25 !important;
+    font-weight: 700 !important;
+    color: #111 !important;
+    margin: 0 0 14mm !important;
+    border: 0 !important;
+    padding: 0 !important;
+  }
+  .a4lp-cover-by {
+    font-size: 14px;
+    color: #444;
+    margin-bottom: 10mm;
+    letter-spacing: 0.04em;
+  }
+  .a4lp-cover-source {
+    margin-top: 14mm;
+    padding-top: 6mm;
+    border-top: 1px solid #ccc;
+    font-size: 10px;
+    color: #666;
+  }
+  .a4lp-cover-source span {
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2mm;
+  }
+  .a4lp-cover-url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: #333;
     word-break: break-all;
-    color: #555;
+    font-size: 11px;
   }
-  .a4lp-source .a4lp-by { font-weight: 600; }
 
   .a4lp-authors {
     border: 1px solid #ddd;

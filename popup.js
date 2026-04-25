@@ -126,6 +126,48 @@ async function pdfFlow(SITE_RULES) {
   window.scrollTo(0, origScroll);
 
   document.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
+
+  // 0a. 自动展开 <details> 与"点击展开"按钮（仅触发 aria-expanded=false 的 button）
+  document.querySelectorAll('details:not([open])').forEach(d => { d.open = true; });
+  document.querySelectorAll('button[aria-expanded="false"]').forEach(b => {
+    const txt = (b.innerText || '').trim().toLowerCase();
+    if (/show more|read more|expand|展开|更多|查看更多|continue reading/.test(txt)) {
+      try { b.click(); } catch {}
+    }
+  });
+
+  // 0b. 把 <picture>/srcset 中最高分辨率写回 <img src>，避免打印缩放后模糊
+  const pickBestFromSrcset = (srcset) => {
+    if (!srcset) return '';
+    let best = '', bestW = 0;
+    srcset.split(',').forEach(part => {
+      const m = part.trim().match(/^(\S+)(?:\s+(\d+)w)?/);
+      if (!m) return;
+      const w = m[2] ? parseInt(m[2], 10) : 0;
+      if (w >= bestW) { bestW = w; best = m[1]; }
+    });
+    return best;
+  };
+  document.querySelectorAll('img').forEach(img => {
+    let best = '', bestW = 0;
+    const pic = img.closest('picture');
+    if (pic) {
+      pic.querySelectorAll('source[srcset]').forEach(s => {
+        const cand = pickBestFromSrcset(s.getAttribute('srcset'));
+        const w = parseInt((s.getAttribute('srcset') || '').match(/(\d+)w/)?.[1] || '0', 10);
+        if (cand && w >= bestW) { bestW = w; best = cand; }
+      });
+    }
+    const own = pickBestFromSrcset(img.getAttribute('srcset'));
+    if (own) {
+      const w = parseInt((img.getAttribute('srcset') || '').match(/(\d+)w/)?.[1] || '0', 10);
+      if (w >= bestW) { bestW = w; best = own; }
+    }
+    if (best && best !== img.src) {
+      try { img.src = new URL(best, location.href).href; } catch {}
+    }
+  });
+
   await withTimeout(
     Promise.all(Array.from(document.images).map(img => {
       if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -136,6 +178,11 @@ async function pdfFlow(SITE_RULES) {
     })),
     5000
   );
+
+  // 0c. 等字体就绪，避免标题/正文打印时还在用 fallback 字形
+  if (document.fonts && document.fonts.ready) {
+    await withTimeout(document.fonts.ready, 1500);
+  }
 
   // 1. 抽取内容（标题/作者/作者介绍/正文/评论）
   const { titleEl, mainEl, commentEls, extraRemove, authorText, authorBios } = pickContent(SITE_RULES);
@@ -217,19 +264,21 @@ async function pdfFlow(SITE_RULES) {
     });
   }
 
-  // 7. SOURCE 横幅 + 作者卡 + 自动目录 一并插在 title 后面
+  // 7. 封面页（标题/作者卡/SOURCE/日期）+ 独立目录页，一并插到 body 最前
   const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const titleText = (titleEl?.innerText || document.title || '').trim();
+  const today = new Date();
+  const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
 
   const insertHost = document.createElement('div');
   insertHost.className = 'a4lp-source';
 
-  // 7a. SOURCE 横幅
-  let html = '<div class="a4lp-banner">' +
-    (authorText ? '<div class="a4lp-by">BY: ' + escapeHtml(authorText) + '</div>' : '') +
-    '<div class="a4lp-url">SOURCE: ' + escapeHtml(location.href) + '</div>' +
-    '</div>';
+  // 7a. 封面页
+  let html = '<section class="a4lp-cover">' +
+    '<div class="a4lp-cover-kicker">SAVED WEBPAGE · ' + escapeHtml(dateStr) + '</div>' +
+    (titleText ? '<h1 class="a4lp-cover-title">' + escapeHtml(titleText) + '</h1>' : '') +
+    (authorText ? '<div class="a4lp-cover-by">BY ' + escapeHtml(authorText) + '</div>' : '');
 
-  // 7b. 作者卡：每位作者一行（姓名 — 职务 + 简介段落）
   if (authorBios && authorBios.length) {
     html += '<div class="a4lp-authors"><div class="a4lp-authors-h">作者介绍 / Authors</div>';
     authorBios.forEach(b => {
@@ -242,7 +291,10 @@ async function pdfFlow(SITE_RULES) {
     html += '</div>';
   }
 
-  // 7c. 自动目录：扫 mainEl 内 h1/h2/h3，给没 id 的赋 id，作链接列表
+  html += '<div class="a4lp-cover-source"><span>SOURCE</span><div class="a4lp-cover-url">' + escapeHtml(location.href) + '</div></div>';
+  html += '</section>';
+
+  // 7b. 自动目录：扫 mainEl 内 h1/h2/h3
   const headings = mainEl ? Array.from(mainEl.querySelectorAll('h1, h2, h3')).filter(h => {
     if (h === titleEl) return false;
     if (h.closest('.a4lp-hide')) return false;
@@ -260,11 +312,20 @@ async function pdfFlow(SITE_RULES) {
   }
 
   insertHost.innerHTML = html;
-  if (titleEl && titleEl.parentNode) {
-    titleEl.parentNode.insertBefore(insertHost, titleEl.nextSibling);
-  } else {
-    document.body.insertBefore(insertHost, document.body.firstChild);
-  }
+  document.body.insertBefore(insertHost, document.body.firstChild);
+
+  // 7c. 诊断日志
+  console.log('[Save Webpage to PDF] extraction', {
+    title: titleText,
+    titleEl: titleEl?.tagName,
+    mainEl: mainEl?.tagName + (mainEl?.id ? '#' + mainEl.id : '') + (mainEl?.className ? '.' + String(mainEl.className).split(' ').slice(0, 2).join('.') : ''),
+    bodyChars: (mainEl?.innerText || '').length,
+    paragraphCount: mainEl?.querySelectorAll('p').length || 0,
+    author: authorText,
+    authorBioCount: authorBios?.length || 0,
+    headingCount: headings.length,
+    commentContainers: commentEls.length
+  });
 
   // 8. 图+caption 成组
   const isCaption = (el) => {
