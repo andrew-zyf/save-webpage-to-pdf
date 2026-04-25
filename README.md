@@ -9,7 +9,7 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 - 自动展开 `<details>` 与「Show more / 展开」按钮，触发懒挂载内容
 - 强制浅色：覆盖站点 dark-mode；代码块 `pre-wrap`、长 URL `break-word`，避免横向截断
 - 自动隐藏小漂浮 fixed、广告占位文字、收听/打印/分享类按钮
-- 内置站点规则（WSJ / Foreign Affairs / New Yorker / Economist / CSIS / CNN）抽取标题/作者/作者介绍/正文/评论容器，按段落文本评分挑选正文，避免选到「最新新闻 / 相关阅读」列表
+- 内置站点规则（WSJ / Foreign Affairs / New Yorker / CSIS / CNN）抽取标题/作者/作者介绍/正文/评论容器，按段落文本评分挑选正文，避免选到「最新新闻 / 相关阅读」列表
 - 控制台输出抽取诊断（标题、main 容器、字数、段落数、作者数、章节数、评论容器数）便于反馈调优
 
 ## 安装
