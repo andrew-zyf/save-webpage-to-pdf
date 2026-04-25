@@ -1,0 +1,154 @@
+/* 每页边距：上下 15mm、左右 18mm（左侧略宽，给装订/打孔留余地）。
+   注意：因为 @page margin > 0，Chrome 打印对话框里"页眉和页脚"
+   选项会出现，需要用户手动取消勾选（取消一次后 Chrome 会记住）。 */
+@page { size: A4 portrait; margin: 15mm 18mm 15mm 20mm; }
+
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* 防止单行文本被横切：每页顶/底至少保留 3 行，
+     避免一行汉字从中间被切成上下两半。 */
+  html, body, p, li, blockquote, td, th, dd, dt {
+    orphans: 3 !important;
+    widows: 3 !important;
+  }
+
+  /* 基础：只对"原子型"内容禁止内部切分。
+     注意：不要给 blockquote / pre / table 等可能很长的容器
+     加 break-inside: avoid —— 一旦内容比一页高，浏览器会硬塞导致裁切。 */
+  img, picture, figure, svg, video, canvas {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  /* 表格行单行不切，但表格整体允许跨页 */
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  /* 标题不要落在页底成孤儿 */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* 关键：图片+说明应作为整体不跨页。
+     <figure> 天然成组；对裸 <img>，由 popup.js 在打印前
+     把 img 与紧邻的 caption 类元素包进 .a4lp-keep。 */
+  figure, .a4lp-keep {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    display: block;
+  }
+
+  /* 限制单图尺寸 ≤ 单页可用区，
+     A4 portrait 210×297mm，减 @page margin 18+20mm 横 / 15mm×2 纵 = 172×267mm。
+     再留 ~20mm 给 caption，故图本体高度上限 247mm。 */
+  img, picture, svg, video, canvas {
+    max-width: 172mm !important;
+    max-height: 247mm !important;
+    object-fit: contain;
+    height: auto !important;
+  }
+
+  /* caption 元素本身别被孤立切走 */
+  figcaption,
+  .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas) {
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+  }
+
+  /* 由 popup.js 标记的元素一律不打印（漂浮广告、sticky 工具栏、cookie 横幅等） */
+  .a4lp-hide { display: none !important; }
+
+  /* ---- 注入卡片：SOURCE 横幅 / 作者卡 / 目录 ---- */
+  .a4lp-source {
+    font: 11px/1.5 -apple-system, system-ui, sans-serif !important;
+    color: #333 !important;
+    margin: 6px 0 14px !important;
+  }
+  .a4lp-source .a4lp-banner {
+    border-bottom: 1px solid #bbb;
+    padding: 0 0 6px;
+    margin-bottom: 10px;
+    word-break: break-all;
+    color: #555;
+  }
+  .a4lp-source .a4lp-by { font-weight: 600; }
+
+  .a4lp-authors {
+    border: 1px solid #ddd;
+    border-left: 3px solid #888;
+    padding: 8px 12px;
+    margin: 8px 0 14px;
+    background: #fafafa !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .a4lp-authors-h {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #666;
+    margin: 0 0 6px;
+  }
+  .a4lp-author {
+    margin: 6px 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .a4lp-author + .a4lp-author { border-top: 1px dotted #ccc; padding-top: 6px; }
+  .a4lp-author-name { font-weight: 700; font-size: 12px; color: #111; }
+  .a4lp-author-role { color: #666; font-style: italic; font-size: 11px; }
+  .a4lp-author-bio  { margin-top: 3px; color: #333; font-size: 11px; line-height: 1.5; }
+
+  .a4lp-toc {
+    border-top: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+    padding: 8px 0 10px;
+    margin: 8px 0 18px;
+    page-break-after: always;
+    break-after: page;
+  }
+  .a4lp-toc-h {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #444;
+    margin: 0 0 6px;
+  }
+  .a4lp-toc ul { list-style: none; margin: 0; padding: 0; }
+  .a4lp-toc li { font-size: 11px; line-height: 1.6; margin: 0; padding: 0; }
+  .a4lp-toc-l1 { font-weight: 700; }
+  .a4lp-toc-l2 { padding-left: 14px; }
+  .a4lp-toc-l3 { padding-left: 28px; color: #555; }
+  .a4lp-toc a {
+    color: #111;
+    text-decoration: none;
+    display: block;
+  }
+  /* Chrome 打印时把锚点解析为目标页码（leader+target-counter，Chrome 120+ 支持） */
+  .a4lp-toc a::after {
+    content: leader('.') ' ' target-counter(attr(href url), page);
+    color: #666;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 常见广告/订阅容器——只匹配窄目标，避免误杀正文。
+     用 [class~=X] 取整词，不用 [class*=X] 模糊匹配。 */
+  ins.adsbygoogle,
+  iframe[src*="doubleclick.net"],
+  iframe[src*="googlesyndication"],
+  iframe[id*="google_ads"],
+  [id^="ad-"], [id$="-ad"], [id*="-ad-"], [id*="adslot"], [id*="adsense"], [id*="GoogleAds"],
+  [class~="ad"], [class~="ads"], [class~="advert"], [class~="adsbygoogle"],
+  [class~="banner-ad"], [class~="ad-banner"],
+  [aria-label*="advertisement" i], [aria-label="广告"] {
+    display: none !important;
+  }
+}

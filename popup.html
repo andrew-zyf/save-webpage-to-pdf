@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 240px; margin: 0; padding: 14px; font: 13px -apple-system, system-ui, sans-serif; }
+    h1 { font-size: 13px; margin: 0 0 10px; font-weight: 600; }
+    button { width: 100%; padding: 8px 10px; border: 0; border-radius: 6px;
+             color: #fff; font-size: 13px; cursor: pointer; }
+    button:hover { filter: brightness(0.92); }
+    button:disabled { background: #999 !important; cursor: default; }
+    #pdf { background: #1a73e8; }
+    .hint { color: #666; font-size: 11px; margin-top: 8px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h1>Save Webpage to PDF</h1>
+  <button id="pdf">保存为竖向 A4 PDF</button>
+  <p class="hint">点击后直接打开打印对话框，选「另存为 PDF」并取消勾选「页眉和页脚」（Chrome 会记住）。</p>
+  <script src="popup.js"></script>
+</body>
+</html>
