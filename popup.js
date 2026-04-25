@@ -58,7 +58,37 @@ const SITE_RULES = {
     author: '[itemprop="name"], [class*="byline"] a, [class*="Byline"] a, [class*="byline"]',
     authorBio: '[class*="author-bio"], [class*="AuthorBio"], [data-module-id*="author-bio"], [class*="bylineBio"]',
     comments: '[id*="spotim"], [class*="spotim"], [data-spotim-module], [id^="conversation"], [id^="sp_message"]',
-    extraRemove: '[aria-label*="Listen to article" i], [data-module-id*="podcast"], [data-module-id*="newsletter"], [data-module-id*="ad-"], [data-module-id*="related"], [data-module-id*="latest"], [data-module-id*="trending"], [data-module-id*="recommended"], [data-module-id*="MostPopular"], [class*="WSJTheme--newsletterModule"], [class*="WSJTheme--related"], [class*="WSJTheme--latest"], [class*="WSJTheme--trending"], [class*="WSJTheme--mostpopular"], [class*="related-articles"], [class*="latest-news"], aside, [aria-label*="Latest" i], [aria-label*="Recommended" i]'
+    extraRemove: [
+      // 听文 / 朗读 工具条
+      '[aria-label*="Listen to article" i]',
+      // 广告 / 播客 / 订阅
+      '[data-module-id*="ad-" i]', '[data-module-id*="podcast" i]', '[data-module-id*="newsletter" i]',
+      // 文末模块（按 module-id / module-zone / block-zone-name 三种命名命中）
+      '[data-module-id*="related" i]', '[data-module-id*="latest" i]', '[data-module-id*="trending" i]',
+      '[data-module-id*="recommended" i]', '[data-module-id*="recommendation" i]',
+      '[data-module-id*="MostPopular" i]', '[data-module-id*="WhatToReadNext" i]',
+      '[data-module-id*="MoreFrom" i]', '[data-module-id*="EditorsPicks" i]',
+      '[data-module-zone*="bottom" i]', '[data-module-zone*="related" i]',
+      '[data-module-zone*="recommend" i]', '[data-module-zone*="more" i]',
+      '[data-module-zone*="popular" i]', '[data-module-zone*="trending" i]',
+      '[data-block-zone-name*="bottom" i]', '[data-block-zone-name*="related" i]',
+      '[data-block-zone-name*="recommend" i]', '[data-block-zone-name*="more" i]',
+      // WSJTheme- 命名空间
+      '[class*="WSJTheme--newsletterModule"]', '[class*="WSJTheme--related"]', '[class*="WSJTheme--latest"]',
+      '[class*="WSJTheme--trending"]', '[class*="WSJTheme--mostpopular"]', '[class*="WSJTheme--recommend"]',
+      '[class*="WSJTheme--carousel"]', '[class*="WSJTheme--video"]',
+      // 通用 class 命名（What to Read Next / Buy Side / Recirc 等）
+      '[class*="WhatToReadNext" i]', '[class*="MoreFromWsj" i]', '[class*="MoreFromWSJ" i]',
+      '[class*="EditorsPicks" i]', '[class*="BuySide" i]',
+      '[class*="ContentRecommendation" i]', '[class*="Recirc" i]', '[class*="Recommendation" i]',
+      '[class*="related-articles"]', '[class*="latest-news"]',
+      '[class*="VideoCarousel" i]', '[class*="ResponsiveThumbnail" i]',
+      // aria 兜底
+      '[aria-label*="Latest" i]', '[aria-label*="Recommended" i]', '[aria-label*="Most popular" i]',
+      '[aria-label*="What to Read" i]', '[aria-label*="More from" i]',
+      // 通用底部容器
+      'aside', 'footer', '[role="contentinfo"]'
+    ].join(', ')
   }
 };
 
