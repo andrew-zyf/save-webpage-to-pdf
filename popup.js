@@ -317,6 +317,60 @@ async function pdfFlow(SITE_RULES) {
   });
   } // /actionButton
 
+  // 5c. 文末卡片列表裁剪（通用，无须站点规则）
+  // 从 mainEl 末尾的直接子节点开始反向扫，遇到「没有实质段落、却堆着多条文章链接」
+  // 的节点就标 hide；遇到第一个含真实正文的子节点立刻停止，避免误删中段列表。
+  if (mainEl && !off('trailingCardStrip')) {
+    const isRecircCard = (el) => {
+      if (isSafe(el)) return false;
+      if (el.classList && el.classList.contains('a4lp-hide')) return true; // 已经被前面步骤处理掉
+      // 段落实质文本
+      let pText = 0;
+      el.querySelectorAll('p').forEach(p => {
+        const t = (p.innerText || '').trim();
+        if (t.length >= 30) pText += t.length;
+      });
+      const links = el.querySelectorAll('a[href]');
+      const allText = (el.innerText || '').trim();
+      // 多条链接 + 段落文本极少 → 推荐/相关/最新 列表
+      if (links.length >= 2 && pText < 80 && allText.length < 1500) return true;
+      // 链接文本占比过高（典型 cards）
+      if (links.length >= 3) {
+        let aText = 0;
+        links.forEach(a => { aText += (a.innerText || '').trim().length; });
+        if (allText.length > 0 && aText / allText.length > 0.55) return true;
+      }
+      return false;
+    };
+    // 从 mainEl 自身向上 2 层各做一次（覆盖「列表是 mainEl 内部尾部」与「列表是 mainEl 兄弟」两种结构）
+    let scopes = [mainEl];
+    if (mainEl.parentElement) scopes.push(mainEl.parentElement);
+    if (mainEl.parentElement?.parentElement) scopes.push(mainEl.parentElement.parentElement);
+    scopes.forEach(scope => {
+      const kids = Array.from(scope.children);
+      for (let i = kids.length - 1; i >= 0; i--) {
+        const k = kids[i];
+        if (k === mainEl) break; // 到了 mainEl 本身就停（仅作用于 mainEl 之后的尾部）
+        if (commentEls.includes(k)) continue;
+        if (isSafe(k)) continue;
+        if (k.classList?.contains('a4lp-source')) continue; // 我们注入的封面/目录
+        if (isRecircCard(k)) { k.classList.add('a4lp-hide'); continue; }
+        // 遇到非 recirc 的实质内容，停止再往前删（避免误伤）
+        const pText = Array.from(k.querySelectorAll('p')).reduce((s, p) => s + ((p.innerText || '').trim().length >= 30 ? (p.innerText || '').trim().length : 0), 0);
+        if (pText >= 200) break;
+      }
+    });
+    // 也处理 mainEl 内部的尾部 children
+    const innerKids = Array.from(mainEl.children);
+    for (let i = innerKids.length - 1; i >= 0; i--) {
+      const k = innerKids[i];
+      if (isSafe(k)) continue;
+      if (isRecircCard(k)) { k.classList.add('a4lp-hide'); continue; }
+      const pText = Array.from(k.querySelectorAll('p')).reduce((s, p) => s + ((p.innerText || '').trim().length >= 30 ? (p.innerText || '').trim().length : 0), 0);
+      if (pText >= 200) break;
+    }
+  }
+
   // 6. keep-path：保留 title/main/comments/safeKeep 路径，隐藏其他兄弟
   if (!off('keepPath')) {
     const keepRoots = new Set();
@@ -381,9 +435,8 @@ async function pdfFlow(SITE_RULES) {
   }
 
   html += '<div class="a4lp-cover-source"><span>SOURCE</span><div class="a4lp-cover-url">' + escapeHtml(location.href) + '</div></div>';
-  html += '</section>';
 
-  // 7b. 自动目录：扫 mainEl 内 h1/h2/h3
+  // 7b. 自动目录：扫 mainEl 内 h1/h2/h3，放在封面内（与封面共用一个分页）
   const headings = mainEl ? Array.from(mainEl.querySelectorAll('h1, h2, h3')).filter(h => {
     if (h === titleEl) return false;
     if (h.closest('.a4lp-hide')) return false;
@@ -399,6 +452,7 @@ async function pdfFlow(SITE_RULES) {
     });
     html += '</ul></nav>';
   }
+  html += '</section>'; // 关闭 .a4lp-cover
 
   insertHost.innerHTML = html;
   document.body.insertBefore(insertHost, document.body.firstChild);

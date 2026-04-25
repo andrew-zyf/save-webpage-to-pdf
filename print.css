@@ -93,12 +93,11 @@
     color: #222 !important;
   }
 
-  /* 封面页：占满首页，结尾换页 */
+  /* 封面页：标题/作者/SOURCE/目录 共占首页，结尾换页 */
   .a4lp-cover {
     page-break-after: always;
     break-after: page;
-    min-height: 240mm;
-    padding: 30mm 0 10mm;
+    padding: 25mm 0 10mm;
     display: block;
   }
   .a4lp-cover-kicker {
@@ -174,9 +173,9 @@
     border-top: 1px solid #bbb;
     border-bottom: 1px solid #bbb;
     padding: 8px 0 10px;
-    margin: 8px 0 18px;
-    page-break-after: always;
-    break-after: page;
+    margin: 14mm 0 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .a4lp-toc-h {
     font-size: 12px;
