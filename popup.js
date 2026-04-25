@@ -373,6 +373,9 @@ async function pdfFlow(SITE_RULES) {
   insertHost.innerHTML = html;
   document.body.insertBefore(insertHost, document.body.firstChild);
 
+  // 7d. 隐藏正文中的原 <h1>，避免与封面大标题重复
+  if (titleEl) titleEl.classList.add('a4lp-hide');
+
   // 7c. 诊断日志
   console.log('[Save Webpage to PDF] extraction', {
     title: titleText,
