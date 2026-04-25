@@ -226,23 +226,47 @@ async function pdfFlow(SITE_RULES) {
     if (text && text.length <= 20 && AD_LABEL_RE.test(text)) el.classList.add('a4lp-hide');
   });
 
-  // 5. 收听/打印/分享类按钮
-  const ACTION_RE = /^(\s*[\d\s]*)?(收听本文|收听|朗读|播放音频|打印本页|打印|存档|收藏|分享到|分享|订阅|关注|举报|纠错|点赞|喜欢|转发|复制链接|复制|加入书签|查看原文|english version|繁體|简体|listen(?:\s+to\s+(?:this\s+)?article)?|listen now|play(?:\s+audio)?|print(?:\s+(?:this\s+)?(?:page|article))?|archive(?:d)?|save(?:\s+for\s+later)?|bookmark|share(?:\s+this)?|copy\s+link|subscribe|follow|report|like)(\s*[\d\s]*)?$/i;
-  const scanRoots = [mainEl, ...commentEls].filter(Boolean);
-  scanRoots.forEach(root => {
-    root.querySelectorAll('button, a, span, li, div, p, [role="button"]').forEach(el => {
-      if (el.closest('.a4lp-hide')) return;
-      if (el.children.length > 3) return;
-      const text = (el.innerText || el.textContent || '').trim();
-      if (!text || text.length > 30 || !ACTION_RE.test(text)) return;
-      let target = el;
-      for (let i = 0; i < 2; i++) {
-        const p = target.parentElement;
-        if (!p || p === root) break;
-        if ((p.innerText || '').trim().length < 60) target = p; else break;
-      }
-      target.classList.add('a4lp-hide');
-    });
+  // 5. 收听/保存/打印/分享类按钮 + 工具条
+  // 5a. 显式工具条容器（icon-only 按钮没文字，必须靠选择器命中）
+  const TOOLBAR_SELECTORS = [
+    '[class*="ActionBar" i]', '[class*="action-bar" i]',
+    '[class*="ArticleActions" i]', '[class*="article-actions" i]',
+    '[class*="ToolBar" i]', '[class*="toolbar" i]',
+    '[class*="SocialIcon" i]', '[class*="social-share" i]', '[class*="ShareTools" i]',
+    '[class*="SaveButton" i]', '[class*="save-button" i]', '[class*="BookmarkButton" i]',
+    '[class*="ListenButton" i]', '[class*="listen-button" i]', '[class*="AudioPlayer" i]',
+    '[class*="ContentHeaderRubric" i] [class*="actions" i]',
+    '[data-testid*="ActionBar" i]', '[data-testid*="ToolBar" i]', '[data-testid*="ShareBar" i]',
+    '[data-testid*="SaveButton" i]', '[data-testid*="BookmarkButton" i]', '[data-testid*="ListenButton" i]',
+    '[aria-label="Save this story" i]', '[aria-label*="Save for later" i]', '[aria-label*="Save article" i]',
+    '[aria-label*="Listen to this" i]', '[aria-label*="Listen to article" i]', '[aria-label*="Play audio" i]',
+    '[aria-label*="Share this" i]', '[aria-label*="Share article" i]', '[aria-label*="Share on" i]',
+    '[aria-label*="Print this" i]', '[aria-label*="Bookmark" i]'
+  ].join(', ');
+  document.querySelectorAll(TOOLBAR_SELECTORS).forEach(el => {
+    if (el.closest('.a4lp-keep')) return;
+    el.classList.add('a4lp-hide');
+  });
+
+  // 5b. 文本/aria-label/title 按短动作短语命中（覆盖 icon-only 按钮）
+  const ACTION_RE = /^(\s*[\d\s·•|]*)?(收听本文|收听|朗读|播放音频|播放|打印本页|打印|存档|收藏本文|收藏|分享到|分享|订阅|关注|举报|纠错|点赞|喜欢|转发|复制链接|复制|加入书签|查看原文|english version|繁體|简体|listen(?:\s+to\s+(?:this\s+)?(?:article|story))?|listen now|play(?:\s+audio)?|print(?:\s+(?:this\s+)?(?:page|article|story))?|archive(?:d)?|save(?:\s+(?:this\s+)?(?:story|article|for\s+later))?|saved|bookmark|share(?:\s+(?:this|article|story|on\s+\w+))?|copy\s+link|subscribe|follow|report|like|gift(?:\s+(?:this\s+)?article)?)(\s*[\d\s·•|]*)?$/i;
+  // 全页扫描，不再仅限于 mainEl（NY 的 Save/Listen 工具条在 article 头部、和正文同级或更上层）
+  document.querySelectorAll('button, a, span, li, div, p, [role="button"]').forEach(el => {
+    if (el.closest('.a4lp-hide, .a4lp-keep')) return;
+    if (el.children.length > 3) return;
+    const text  = (el.innerText || el.textContent || '').trim();
+    const aria  = (el.getAttribute && el.getAttribute('aria-label') || '').trim();
+    const title = (el.getAttribute && el.getAttribute('title') || '').trim();
+    const candidates = [text, aria, title].filter(s => s && s.length <= 40);
+    if (!candidates.some(s => ACTION_RE.test(s))) return;
+    // 上溯最多 2 层，把整个按钮容器一起隐藏（按钮+图标+标签 通常包在小 div 里）
+    let target = el;
+    for (let i = 0; i < 2; i++) {
+      const p = target.parentElement;
+      if (!p || p === document.body) break;
+      if ((p.innerText || '').trim().length < 60) target = p; else break;
+    }
+    target.classList.add('a4lp-hide');
   });
 
   // 6. keep-path：保留 title/main/comments 路径，隐藏其他兄弟
