@@ -317,57 +317,35 @@ async function pdfFlow(SITE_RULES) {
   });
   } // /actionButton
 
-  // 5c. 文末卡片列表裁剪（通用，无须站点规则）
-  // 从 mainEl 末尾的直接子节点开始反向扫，遇到「没有实质段落、却堆着多条文章链接」
-  // 的节点就标 hide；遇到第一个含真实正文的子节点立刻停止，避免误删中段列表。
+  // 5c. 文末截断（通用，无须站点规则）
+  // 思路：找到 mainEl 内「最后一段实质段落 / figure / blockquote」作为「正文结束点」，
+  // 然后把全文 DOM 顺序里位于它之后的一切都 hide（除评论容器、safeKeep、我们注入的封面）。
+  // 这样无论 WSJ 把推荐列表混在 mainEl 内部尾部、还是放成 mainEl 兄弟、
+  // 或更外层的 wrapper 都能一次清理；并且不依赖随时变动的 class 名。
   if (mainEl && !off('trailingCardStrip')) {
-    const isRecircCard = (el) => {
-      if (isSafe(el)) return false;
-      if (el.classList && el.classList.contains('a4lp-hide')) return true; // 已经被前面步骤处理掉
-      // 段落实质文本
-      let pText = 0;
-      el.querySelectorAll('p').forEach(p => {
-        const t = (p.innerText || '').trim();
-        if (t.length >= 30) pText += t.length;
-      });
-      const links = el.querySelectorAll('a[href]');
-      const allText = (el.innerText || '').trim();
-      // 多条链接 + 段落文本极少 → 推荐/相关/最新 列表
-      if (links.length >= 2 && pText < 80 && allText.length < 1500) return true;
-      // 链接文本占比过高（典型 cards）
-      if (links.length >= 3) {
-        let aText = 0;
-        links.forEach(a => { aText += (a.innerText || '').trim().length; });
-        if (allText.length > 0 && aText / allText.length > 0.55) return true;
-      }
-      return false;
-    };
-    // 从 mainEl 自身向上 2 层各做一次（覆盖「列表是 mainEl 内部尾部」与「列表是 mainEl 兄弟」两种结构）
-    let scopes = [mainEl];
-    if (mainEl.parentElement) scopes.push(mainEl.parentElement);
-    if (mainEl.parentElement?.parentElement) scopes.push(mainEl.parentElement.parentElement);
-    scopes.forEach(scope => {
-      const kids = Array.from(scope.children);
-      for (let i = kids.length - 1; i >= 0; i--) {
-        const k = kids[i];
-        if (k === mainEl) break; // 到了 mainEl 本身就停（仅作用于 mainEl 之后的尾部）
-        if (commentEls.includes(k)) continue;
-        if (isSafe(k)) continue;
-        if (k.classList?.contains('a4lp-source')) continue; // 我们注入的封面/目录
-        if (isRecircCard(k)) { k.classList.add('a4lp-hide'); continue; }
-        // 遇到非 recirc 的实质内容，停止再往前删（避免误伤）
-        const pText = Array.from(k.querySelectorAll('p')).reduce((s, p) => s + ((p.innerText || '').trim().length >= 30 ? (p.innerText || '').trim().length : 0), 0);
-        if (pText >= 200) break;
-      }
+    const candidates = [];
+    mainEl.querySelectorAll('p, blockquote, figure, li, h2, h3, h4').forEach(el => {
+      const t = (el.innerText || '').trim();
+      if (t.length >= 60) candidates.push(el);
     });
-    // 也处理 mainEl 内部的尾部 children
-    const innerKids = Array.from(mainEl.children);
-    for (let i = innerKids.length - 1; i >= 0; i--) {
-      const k = innerKids[i];
-      if (isSafe(k)) continue;
-      if (isRecircCard(k)) { k.classList.add('a4lp-hide'); continue; }
-      const pText = Array.from(k.querySelectorAll('p')).reduce((s, p) => s + ((p.innerText || '').trim().length >= 30 ? (p.innerText || '').trim().length : 0), 0);
-      if (pText >= 200) break;
+    const lastReal = candidates[candidates.length - 1] || mainEl;
+    if (lastReal) {
+      // DOM 顺序往后遍历（包含子树），把后续节点全部 hide
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+      let started = false;
+      let node;
+      while ((node = walker.nextNode())) {
+        if (!started) {
+          if (node === lastReal) started = true;
+          continue;
+        }
+        if (lastReal.contains(node)) continue;        // lastReal 内部跳过
+        if (node.closest('.a4lp-source')) continue;    // 注入的封面/目录
+        if (node.closest('.a4lp-hide')) continue;      // 已被前面步骤标记
+        if (isSafe(node)) continue;
+        if (commentEls.some(c => c === node || c.contains(node) || node.contains(c))) continue;
+        node.classList.add('a4lp-hide');
+      }
     }
   }
 
