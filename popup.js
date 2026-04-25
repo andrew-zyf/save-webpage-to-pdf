@@ -31,8 +31,9 @@ const SITE_RULES = {
     extraRemove: '.article-tools, .article__related, .article__most_read, .article-tags, .promo-callout, .article-actions, .related-articles, .recirculation, .related-content, .promo-block, [class*="newsletter"], [class*="paywall-promo"], [class*="audio-player"], [class*="article-callout"], [data-armstrong-id="wrapper"]'
   },
   'newyorker.com': {
-    // 只取正文容器，不取整个 <article>（<article> 末尾会带 recirc/newsletter/footer 模块）
-    main: '[data-testid="ArticleBodyWrapper"], [data-testid="BodyWrapper"], [class*="ArticleBodyWrapper"], [class*="BodyWrapper"], [class*="body__inner-container"], [class*="article__body"], [class*="ArticleBody"]',
+    // 取整个 <article>，避免钉死内层后正文被截断（NY 正文常被切到多个
+    // .body__inner-container 段）；末尾的 recirc/newsletter/footer 模块由 extraRemove 兜底。
+    main: 'article, main article, [data-attribute-verso-pattern="article-body"], [class*="ArticleBodyWrapper"], [class*="BodyWrapper"], main',
     title: 'h1',
     author: '[class*="BylineWrapper"] a, [class*="byline"] a, [class*="Byline"]',
     authorBio: '[class*="ContributorBio"], [class*="ContributorBlock"], [class*="contributor-bio"]',
