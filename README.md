@@ -16,7 +16,7 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 
 1. 打开 `chrome://extensions`
 2. 右上角开启「开发者模式」
-3. 点击「加载已解压的扩展程序」，选择本目录 `save-webpage/`
+3. 点击「加载已解压的扩展程序」，选择本目录 `save-webpage-to-pdf/`
 4. 工具栏出现蓝色图标即安装成功
 
 ## 使用
@@ -51,7 +51,7 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 ## 文件结构
 
 ```
-save-webpage/
+save-webpage-to-pdf/
 ├── manifest.json   MV3 清单
 ├── popup.html      弹窗 UI（单按钮）
 ├── popup.js        抽取 + 确认 + 触发打印

@@ -1,33 +1,11 @@
-// ---- 站点规则白名单 ----
+// ---- 站点规则白名单（按 host 字母序） ----
 const SITE_RULES = {
-  'wsj.com': {
-    main: 'section[subscriptions-section="content"], [data-module-id*="ArticleBody"], article[itemtype*="NewsArticle"] section.article-content, [class*="ArticleBody-module"] section, article section.article-content',
-    title: 'h1[itemprop="headline"], h1',
-    author: '[itemprop="name"], [class*="byline"] a, [class*="Byline"] a, [class*="byline"]',
-    authorBio: '[class*="author-bio"], [class*="AuthorBio"], [data-module-id*="author-bio"], [class*="bylineBio"]',
-    comments: '[id*="spotim"], [class*="spotim"], [data-spotim-module], [id^="conversation"], [id^="sp_message"]',
-    extraRemove: '[aria-label*="Listen to article" i], [data-module-id*="podcast"], [data-module-id*="newsletter"], [data-module-id*="ad-"], [data-module-id*="related"], [data-module-id*="latest"], [data-module-id*="trending"], [data-module-id*="recommended"], [data-module-id*="MostPopular"], [class*="WSJTheme--newsletterModule"], [class*="WSJTheme--related"], [class*="WSJTheme--latest"], [class*="WSJTheme--trending"], [class*="WSJTheme--mostpopular"], [class*="related-articles"], [class*="latest-news"], aside, [aria-label*="Latest" i], [aria-label*="Recommended" i]'
-  },
-  'foreignaffairs.com': {
-    main: 'article.article, [class*="article__body"], .article-body, .article-content, article, main',
-    title: 'h1.topper__title, h1',
-    author: '.topper__byline a, .article-byline a, [class*="byline"] a, [class*="byline"]',
-    authorBio: '[class*="author-bio"], [class*="contributor-bio"], [class*="AuthorBio"], .article__author-info',
-    extraRemove: '.article-tools, .article__related, .article__most_read, .article-tags, .promo-callout, .article-actions, .related-articles, .recirculation, .related-content, .promo-block, [class*="newsletter"], [class*="paywall-promo"], [class*="audio-player"], [class*="article-callout"], [data-armstrong-id="wrapper"]'
-  },
-  'newyorker.com': {
-    main: 'article, [class*="ArticleBody"], [class*="article__body"], main',
-    title: 'h1',
-    author: '[class*="BylineWrapper"] a, [class*="byline"] a, [class*="Byline"]',
-    authorBio: '[class*="ContributorBio"], [class*="ContributorBlock"], [class*="contributor-bio"]',
-    extraRemove: '[class*="ConsumerMarketingUnit"], [class*="newsletter"], [class*="RelatedListWrapper"], [class*="related"], [class*="ContentRecirc"], [data-testid*="paywall"]'
-  },
-  'economist.com': {
-    main: 'article, [data-test-id="Article"], main',
-    title: 'h1',
-    author: '[data-test-id*="byline"], [class*="byline"]',
-    authorBio: '[data-test-id*="author-bio"], [class*="author-bio"], [class*="contributor-bio"]',
-    extraRemove: '[data-test-id*="newsletter"], [data-test-id*="related"], [data-test-id*="audio"], [data-test-id*="recommend"], [data-test-id*="myft"], [class*="podcast"], [class*="newsletter-signup"], [class*="paywall"]'
+  'cnn.com': {
+    main: '.article__content-container, .article__content, [data-component-name="ArticleBody"], article.article .l-container, article.article, main article',
+    title: 'h1.headline__text, h1[data-editable="headlineText"], h1',
+    author: '.byline__name, [class*="byline__name"], [class*="byline"] a, [class*="byline"]',
+    authorBio: '[class*="author-bio"], [class*="byline__bio"], [class*="contributor-bio"]',
+    extraRemove: '[data-component-name*="related"], [data-component-name*="newsletter"], [data-component-name*="recommended"], [data-component-name*="zone"], [class*="zone__items"], .ad-slot, [data-uri*="ads"], [class*="related-content"], [class*="paid-partner"], [class*="related-articles"]'
   },
   'csis.org': {
     // CSIS commentary 页面：作者卡通常在正文上方（.commentary-authors / .expert-card）
@@ -38,12 +16,48 @@ const SITE_RULES = {
     authorBio: '.commentary-authors .expert-card, .commentary-authors article, .expert-card, .expert-bio-sidebar, .field--name-field-experts > .field__item, [class*="contributor-bio"], [class*="contributor-info"]',
     extraRemove: '.related-content, .expert-bio-sidebar, .field--name-field-experts, .program-card, .social-share, .views-element-container, .region-sidebar, .commentary-authors'
   },
-  'cnn.com': {
-    main: '.article__content-container, .article__content, [data-component-name="ArticleBody"], article.article .l-container, article.article, main article',
-    title: 'h1.headline__text, h1[data-editable="headlineText"], h1',
-    author: '.byline__name, [class*="byline__name"], [class*="byline"] a, [class*="byline"]',
-    authorBio: '[class*="author-bio"], [class*="byline__bio"], [class*="contributor-bio"]',
-    extraRemove: '[data-component-name*="related"], [data-component-name*="newsletter"], [data-component-name*="recommended"], [data-component-name*="zone"], [class*="zone__items"], .ad-slot, [data-uri*="ads"], [class*="related-content"], [class*="paid-partner"], [class*="related-articles"]'
+  'economist.com': {
+    main: 'article, [data-test-id="Article"], main',
+    title: 'h1',
+    author: '[data-test-id*="byline"], [class*="byline"]',
+    authorBio: '[data-test-id*="author-bio"], [class*="author-bio"], [class*="contributor-bio"]',
+    extraRemove: '[data-test-id*="newsletter"], [data-test-id*="related"], [data-test-id*="audio"], [data-test-id*="recommend"], [data-test-id*="myft"], [class*="podcast"], [class*="newsletter-signup"], [class*="paywall"]'
+  },
+  'foreignaffairs.com': {
+    main: 'article.article, [class*="article__body"], .article-body, .article-content, article, main',
+    title: 'h1.topper__title, h1',
+    author: '.topper__byline a, .article-byline a, [class*="byline"] a, [class*="byline"]',
+    authorBio: '[class*="author-bio"], [class*="contributor-bio"], [class*="AuthorBio"], .article__author-info',
+    extraRemove: '.article-tools, .article__related, .article__most_read, .article-tags, .promo-callout, .article-actions, .related-articles, .recirculation, .related-content, .promo-block, [class*="newsletter"], [class*="paywall-promo"], [class*="audio-player"], [class*="article-callout"], [data-armstrong-id="wrapper"]'
+  },
+  'newyorker.com': {
+    // 只取正文容器，不取整个 <article>（<article> 末尾会带 recirc/newsletter/footer 模块）
+    main: '[data-testid="ArticleBodyWrapper"], [data-testid="BodyWrapper"], [class*="ArticleBodyWrapper"], [class*="BodyWrapper"], [class*="body__inner-container"], [class*="article__body"], [class*="ArticleBody"]',
+    title: 'h1',
+    author: '[class*="BylineWrapper"] a, [class*="byline"] a, [class*="Byline"]',
+    authorBio: '[class*="ContributorBio"], [class*="ContributorBlock"], [class*="contributor-bio"]',
+    extraRemove: [
+      '[class*="ConsumerMarketingUnit"]',
+      '[class*="Newsletter"]', '[class*="newsletter"]',
+      '[class*="RelatedList"]', '[class*="ContentRecirc"]', '[class*="Recirc"]', '[class*="recirc"]',
+      '[class*="MostPopular"]', '[class*="Recommended"]', '[class*="recommend"]',
+      '[class*="ContentFooter"]', '[class*="StandardFooter"]', '[class*="ArticleFooter"]', '[class*="Footer-"]',
+      '[class*="GenericCallout"]', '[class*="CalloutBlock"]',
+      '[class*="Cartoon"]', '[class*="DailyCartoon"]',
+      '[class*="podcast" i]',
+      '[data-testid*="paywall" i]', '[data-testid*="Recirc" i]', '[data-testid*="Recommend" i]',
+      '[data-testid*="MostPopular" i]', '[data-testid*="Newsletter" i]', '[data-testid*="Footer" i]',
+      '[aria-label*="More from" i]', '[aria-label*="Recommended" i]', '[aria-label*="Most popular" i]',
+      'aside', 'footer', '[role="contentinfo"]'
+    ].join(', ')
+  },
+  'wsj.com': {
+    main: 'section[subscriptions-section="content"], [data-module-id*="ArticleBody"], article[itemtype*="NewsArticle"] section.article-content, [class*="ArticleBody-module"] section, article section.article-content',
+    title: 'h1[itemprop="headline"], h1',
+    author: '[itemprop="name"], [class*="byline"] a, [class*="Byline"] a, [class*="byline"]',
+    authorBio: '[class*="author-bio"], [class*="AuthorBio"], [data-module-id*="author-bio"], [class*="bylineBio"]',
+    comments: '[id*="spotim"], [class*="spotim"], [data-spotim-module], [id^="conversation"], [id^="sp_message"]',
+    extraRemove: '[aria-label*="Listen to article" i], [data-module-id*="podcast"], [data-module-id*="newsletter"], [data-module-id*="ad-"], [data-module-id*="related"], [data-module-id*="latest"], [data-module-id*="trending"], [data-module-id*="recommended"], [data-module-id*="MostPopular"], [class*="WSJTheme--newsletterModule"], [class*="WSJTheme--related"], [class*="WSJTheme--latest"], [class*="WSJTheme--trending"], [class*="WSJTheme--mostpopular"], [class*="related-articles"], [class*="latest-news"], aside, [aria-label*="Latest" i], [aria-label*="Recommended" i]'
   }
 };
 
