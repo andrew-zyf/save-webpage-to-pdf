@@ -200,7 +200,7 @@ async function pdfFlow(SITE_RULES) {
   }
 
   // 1. 抽取内容（标题/作者/作者介绍/正文/评论）+ 站点豁免（safeKeep / disable）
-  const { titleEl, mainEl, commentEls, extraRemove, authorText, authorBios, safeKeep, disable } = pickContent(SITE_RULES);
+  const { titleEl, mainEl, commentEls, extraRemove, authorText, authorBios, safeKeep, disable, rulesMatchedHost } = pickContent(SITE_RULES);
   const off = (key) => Array.isArray(disable) && disable.includes(key);
   // safeKeep：站点规则给出的「免疫一切隐藏」选择器集合 + .a4lp-keep 容器
   const SAFE_GUARD = ['.a4lp-keep', safeKeep].filter(Boolean).join(', ');
