@@ -11,13 +11,17 @@
 
 ## 安装
 
-**方式一（推荐）**：[Chrome Web Store →「添加到 Chrome」](https://chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe/preview?hl=zh-CN&authuser=0)。
+**方式一（推荐，但目前是预览版）**：扩展已提交 [Chrome Web Store](https://chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe/preview?hl=zh-CN&authuser=0)，**仍在 Google 审核中**。审核通过前，链接打开是预览页（只能登录 Google 开发者后台才能看到），还无法点「添加到 Chrome」公开安装。审核通过后会自动转成正式商店页。在此之前请走方式二。
 
-**方式二（开发者模式）**：
+**方式二（开发者模式 / 自行加载）**：
 
-1. 打开 `chrome://extensions`，右上角开「开发者模式」
-2. 「加载已解压的扩展程序」→ 选本目录
+1. **获取仓库**——任选其一：
+   - `git clone https://github.com/andrew-zyf/save-webpage-to-pdf.git`
+   - 或在 GitHub 页面点 `Code → Download ZIP`，解压到本地任意目录
+2. **加载到 Chrome**：打开 `chrome://extensions`，右上角开「开发者模式」，点「加载已解压的扩展程序」，选刚才克隆/解压出来的仓库根目录
 3. 工具栏出现蓝色图标即装好
+
+> `examples/` 仅是样张 PDF（约 30 MB），不参与扩展运行；嫌占空间可以直接删除该文件夹。
 
 ## 使用
 
