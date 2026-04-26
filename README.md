@@ -27,19 +27,19 @@
 - 页面右键 → `Save Webpage to PDF`
 - 快捷键 `Shift + Option + P`（macOS）/ `Shift + Alt + P`（Win/Linux），可在 `chrome://extensions/shortcuts` 改键
 
-## Examples
+## 样张
 
 [`examples/`](examples/) 里每行左侧是本扩展生成的 PDF，右侧 ↗ 是原文，可对照效果。
 
 | 站点 | 样张 PDF | 原文 |
 | --- | --- | --- |
-| Carnegie | [AI 与劳动之辩：未来工作的三种视角](examples/Carnegie%20-%20The%20AI%20Labor%20Debate_%20Three%20Views%20on%20the%20Future%20of%20Work%20_%20Carnegie%20Endowment%20for%20International%20Peace.pdf) | [↗](https://carnegieendowment.org/research/2026/04/the-ai-labor-debate-three-views-on-the-future-of-work) |
-| CNN | [马里武装袭击军事基地：基地组织关联武装宣称负责](examples/CNN%20-%20Mali%20insurgents%20hit%20military%20bases%20in%20%E2%80%98complex%20attacks%E2%80%99%20claimed%20by%20al%20Qaeda-linked%20militants.pdf) | [↗](https://edition.cnn.com/2026/04/25/africa/mali-bamako-gunmen-attacks-intl) |
-| CSIS | [如何解读战时油价](examples/CSIS%20-%20How%20to%20Interpret%20Wartime%20Oil%20Prices.pdf) | [↗](https://www.csis.org/analysis/how-interpret-wartime-oil-prices) |
-| Foreign Affairs | [技术制高点](examples/Foreign%20Affairs%20-%20The%20Tech%20High%20Ground.pdf) | [↗](https://www.foreignaffairs.com/united-states/tech-high-ground-jake-sullivan) |
-| New Yorker | [J. D. 万斯的颠簸之旅](examples/New%20Yorker%20-%20J.%20D.%20Vance%E2%80%99s%20Bumpy%20Ride.pdf) | [↗](https://www.newyorker.com/magazine/2026/04/27/j-d-vances-bumpy-ride) |
-| The Economist | [战争修辞已变，且变得更糟](examples/The%20Economist%20-%20The%20rhetoric%20of%20war%20has%20changed.%20Not%20for%20the%20better.pdf) | [↗](https://www.economist.com/culture/2026/04/23/the-rhetoric-of-war-has-changed-not-for-the-better) |
-| WSJ | [联航「算牌」CEO 押下重注——开始见效](examples/WSJ%20-%20United%E2%80%99s%20Card-Counting%20CEO%20Made%20a%20Huge%20Bet%E2%80%94and%20It%E2%80%99s%20Paying%20Off.pdf) | [↗](https://www.wsj.com/business/airlines/united-airlines-ceo-scott-kirby-delta-american-11621d97) |
+| Carnegie | [The AI Labor Debate](examples/Carnegie%20-%20The%20AI%20Labor%20Debate_%20Three%20Views%20on%20the%20Future%20of%20Work%20_%20Carnegie%20Endowment%20for%20International%20Peace.pdf) | [↗](https://carnegieendowment.org/research/2026/04/the-ai-labor-debate-three-views-on-the-future-of-work) |
+| CNN | [Mali insurgents hit military bases](examples/CNN%20-%20Mali%20insurgents%20hit%20military%20bases%20in%20%E2%80%98complex%20attacks%E2%80%99%20claimed%20by%20al%20Qaeda-linked%20militants.pdf) | [↗](https://edition.cnn.com/2026/04/25/africa/mali-bamako-gunmen-attacks-intl) |
+| CSIS | [How to Interpret Wartime Oil Prices](examples/CSIS%20-%20How%20to%20Interpret%20Wartime%20Oil%20Prices.pdf) | [↗](https://www.csis.org/analysis/how-interpret-wartime-oil-prices) |
+| Foreign Affairs | [The Tech High Ground](examples/Foreign%20Affairs%20-%20The%20Tech%20High%20Ground.pdf) | [↗](https://www.foreignaffairs.com/united-states/tech-high-ground-jake-sullivan) |
+| New Yorker | [J. D. Vance's Bumpy Ride](examples/New%20Yorker%20-%20J.%20D.%20Vance%E2%80%99s%20Bumpy%20Ride.pdf) | [↗](https://www.newyorker.com/magazine/2026/04/27/j-d-vances-bumpy-ride) |
+| The Economist | [The rhetoric of war has changed](examples/The%20Economist%20-%20The%20rhetoric%20of%20war%20has%20changed.%20Not%20for%20the%20better.pdf) | [↗](https://www.economist.com/culture/2026/04/23/the-rhetoric-of-war-has-changed-not-for-the-better) |
+| WSJ | [United's Card-Counting CEO](examples/WSJ%20-%20United%E2%80%99s%20Card-Counting%20CEO%20Made%20a%20Huge%20Bet%E2%80%94and%20It%E2%80%99s%20Paying%20Off.pdf) | [↗](https://www.wsj.com/business/airlines/united-airlines-ceo-scott-kirby-delta-american-11621d97) |
 
 ## 工作原理
 
