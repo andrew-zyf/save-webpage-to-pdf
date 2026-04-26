@@ -23,10 +23,15 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 
 ## 使用
 
-打开任意网页，点击插件图标 → 选择布局 → 「保存为竖向 A4 PDF」：
+打开任意网页，**两种入口**任选其一：
+
+- 工具栏图标 → 选择布局 → 「保存为竖向 A4 PDF」
+- 页面任意位置右键 → `Save Webpage to PDF — 阅读版` / `归档版`（无需打开 popup）
+
+接下来扩展会：
 
 1. 扩展滚动整页触发懒加载，等待图片加载
-2. 抽取标题/作者/正文，注入 `.a4lp-hide` 隐藏非正文兄弟、`.a4lp-keep` 包住「图+caption」
+2. 抽取标题/作者/作者介绍/正文/评论，注入 `.a4lp-hide` 隐藏非正文兄弟、`.a4lp-keep` 包住「图+caption」
 3. 直接调用 `window.print()`，弹出系统打印对话框
 4. 目标选「另存为 PDF」→ 取消勾选「页眉和页脚」（Chrome 会记住）→ 保存
 
@@ -66,6 +71,9 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 ## 已知限制
 
 - 跨域 iframe 内的图片不受样式控制
+- 跨域 `<img>`（来自 CDN 且未带 `crossorigin`）会污染 canvas，`compressHugeImage` 会静默跳过，PDF 体积可能远高于本地图片场景（如 WSJ 样张 8.7 MB）
+- 大图重采样会统一重编码为 JPEG（透明 PNG 会被加白底），逻辑图（含 logo/icon/chart/diagram 等关键词）走更保守的质量阈值
+- caption 较长时，图 + caption 组合可能仍会超过单页可用高度而被拆分；图本身限制在 255mm，但 caption 高度未计入
 - 站点自带的 sticky/fixed 元素如果占据较大面积（≥ 视口 30%）不会被自动隐藏
 - 「caption 检测」基于启发式（标签名、类名、长度），少数站点可能漏识别；若图片本身在 `<figure>` 中则始终生效
 
@@ -80,7 +88,9 @@ save-webpage-to-pdf/
 ├── examples/       样张与阅读版/归档版对比
 ├── manifest.json   MV3 清单
 ├── popup.html      弹窗 UI（单按钮）
-├── popup.js        抽取 + 确认 + 触发打印
+├── popup.js        Popup UI + 触发 flow.js
+├── flow.js         站点规则 + 抽取 + 触发打印（popup 与右键菜单共用）
+├── background.js   service worker：注册右键菜单 + 调用 flow.js
 ├── print.css       @page + 防跨页规则
 ├── icons/          16/48/128 图标
 ├── LICENSE         MIT 许可证

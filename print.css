@@ -23,6 +23,18 @@
   html, body {
     margin: 0 !important;
     padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    /* 站点常给 body 设 flex/grid 把内容推到一侧，强制回到 block 让子元素的
+       margin:auto 生效，从而让封面 / 正文 / 目录在打印页中真正居中。 */
+    display: block !important;
+    float: none !important;
+    text-align: initial !important;
+  }
+  body.a4lp-print-root > .a4lp-source,
+  body.a4lp-print-root > .a4lp-main {
+    float: none !important;
+    clear: both !important;
   }
   /* 长 URL / 长 token 在窄列内换行而不是被裁掉 */
   a, code { word-break: break-word; overflow-wrap: anywhere; }
@@ -48,6 +60,16 @@
   html, body, p, li, blockquote, td, th, dd, dt {
     orphans: 3 !important;
     widows: 3 !important;
+  }
+  /* Skia print 在段落跨页边界处偶发"半字重影"（同一行被先在 N 页底渲染一次
+     —— 下行字符与逗号被裁掉 —— 再在 N+1 页顶完整重渲染一次，造成
+     "ou marshal not merel ords" 紧挨 "you marshal not merely words"）。
+     给 <p> 加 break-inside: avoid 让段落整段跨页，绕开这个 bug。
+     `break-inside: avoid` 是 hint —— 段落超过单页时浏览器仍会拆。 */
+  .a4lp-main p,
+  .a4lp-comments p {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   /* 基础：只对"原子型"内容禁止内部切分。
@@ -96,6 +118,65 @@
 
   /* 由 popup.js 标记的元素一律不打印（漂浮广告、sticky 工具栏、cookie 横幅等） */
   .a4lp-hide { display: none !important; }
+  /* 站点常用 aria-hidden / hidden / inert 给屏幕外的"影子层"占位（少数站点会
+     把同一段正文复制成 aria-hidden 副本叠在原文上）。这里只隐藏纯文本的影子节点
+     —— 任何包含 img/picture/figure/svg/video/canvas 的容器都跳过，否则 lightbox /
+     hero figure 之类的装饰性 aria-hidden 包装会把其中的图片一起抹掉（CNN/Economist
+     的首图正是因为外层 div 带 aria-hidden 才被误伤）。 */
+  body.a4lp-print-root [aria-hidden="true"]:not(img):not(picture):not(figure):not(figcaption):not(svg):not(svg *):not(.a4lp-source):not(.a4lp-source *):not(:has(img)):not(:has(picture)):not(:has(figure)):not(:has(svg)):not(:has(video)):not(:has(canvas)),
+  body.a4lp-print-root [hidden]:not(.a4lp-source):not(.a4lp-source *):not(:has(img)):not(:has(picture)):not(:has(figure)):not(:has(svg)):not(:has(video)):not(:has(canvas)),
+  body.a4lp-print-root [inert]:not(.a4lp-source):not(.a4lp-source *):not(:has(img)):not(:has(picture)):not(:has(figure)):not(:has(svg)):not(:has(video)):not(:has(canvas)) {
+    display: none !important;
+  }
+  /* 撤销文本装饰 / 动画 / 裁切 / 蒙版 / 滤镜 —— 这些是 Economist 等站点
+     paywall 淡入动画在打印时被 Skia 拍到中间帧、导致 "ou marshal not merel ords"
+     这类丢字符的根因（带下行的字符 y/p/q/g/j 和逗号被剪掉）。 */
+  body.a4lp-print-root,
+  body.a4lp-print-root *,
+  body.a4lp-print-root *::before,
+  body.a4lp-print-root *::after {
+    animation: none !important;
+    -webkit-animation: none !important;
+    transition: none !important;
+    -webkit-transition: none !important;
+    clip-path: none !important;
+    -webkit-clip-path: none !important;
+    mask: none !important;
+    -webkit-mask: none !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  body.a4lp-print-root :not(.a4lp-cover):not(.a4lp-cover *):not(.a4lp-toc):not(.a4lp-toc *) {
+    text-shadow: none !important;
+    -webkit-text-stroke: 0 !important;
+    opacity: 1 !important;
+  }
+  /* 强制全文用系统衬线字体，并禁用合成字体 / 字距特性 ——
+     Economist 等站点用 web font 渲染正文，若加载到一半（部分 glyph
+     缺失），Skia 会用另一份字体补齐导致同句话出现两份重叠（一份缺
+     y/w/逗号、一份完整）。强制 fallback 到 Georgia 可绕开。 */
+  body.a4lp-print-root *:not(.a4lp-source):not(.a4lp-source *):not(code):not(code *):not(pre):not(pre *):not(svg):not(svg *) {
+    font-family: Georgia, "Times New Roman", "Noto Serif CJK SC", "Songti SC", serif !important;
+    font-synthesis: none !important;
+    font-feature-settings: normal !important;
+    font-variant-ligatures: none !important;
+    text-rendering: geometricPrecision !important;
+  }
+  /* NY Listen 控件 —— 结构选择器/aria 属性兜底（防止 sweepListen 漏网） */
+  body.a4lp-print-root verso-listen-button,
+  body.a4lp-print-root [class*="ListenButton" i],
+  body.a4lp-print-root [class*="listen-button" i],
+  body.a4lp-print-root [class*="ListenContainer" i],
+  body.a4lp-print-root [data-testid*="listen" i],
+  body.a4lp-print-root [aria-label*="Listen to" i],
+  body.a4lp-print-root [aria-label="Play"],
+  body.a4lp-print-root button[aria-label*="audio" i] {
+    display: none !important;
+  }
   .a4lp-main,
   .a4lp-comments,
   .a4lp-cover,
@@ -104,6 +185,122 @@
     max-width: var(--a4lp-measure, 136mm) !important;
     margin-left: auto !important;
     margin-right: auto !important;
+    float: none !important;
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+  }
+  /* 中和 .a4lp-main 与 body 之间所有祖先节点的 padding / margin / width
+     / transform / float / position —— 否则站点容器（多层 div）会把已经
+     用 margin:auto 居中的列重新推向某一侧。需要 Chrome 105+ 的 :has()。 */
+  body.a4lp-print-root :has(.a4lp-main) {
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    float: none !important;
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
+    right: auto !important;
+    display: block !important;
+    box-sizing: border-box !important;
+  }
+  /* 图片/figure：撤销站点的 100vw 满屏 / 负 margin / translateX 等
+     "出血"样式，让任何图都被钉死在居中列内，并以 contain 完整显示。 */
+  body.a4lp-print-root figure,
+  body.a4lp-print-root .a4lp-keep,
+  body.a4lp-print-root picture,
+  body.a4lp-print-root img,
+  body.a4lp-print-root video,
+  body.a4lp-print-root canvas {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    float: none !important;
+    position: static !important;
+    transform: none !important;
+    left: auto !important;
+    right: auto !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: 100% !important;
+    /* 强制 display/visibility —— 不少站点的打印样式表自带
+       `figure, img { display: none }` 直接抹掉所有图（Economist/CNN 命中），
+       这里用 !important 反向覆盖。 */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  body.a4lp-print-root img { display: inline-block !important; }
+  /* SVG 不强制全栏宽 —— 图标类 SVG（按钮内、icon 类、有 width/height 属性的）
+     被前一版规则放大到整列宽，看起来像"巨大的符号"。这里只清掉位置/变换，
+     不动尺寸；让浏览器按 SVG 自身的 viewBox / width / height 属性渲染。 */
+  body.a4lp-print-root svg {
+    float: none !important;
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  /* 链接 / 按钮 / "More by" / 作者卡 等容器里的 SVG 一律按图标尺寸渲染 ——
+     防止 viewBox-only 的 SVG 在没有 width/height 属性时被默认撑成 300×150
+     甚至整列宽（FA "More by Jon B. Alterman" 后的箭头巨型图就是这条没盯到）。 */
+  body.a4lp-print-root a svg,
+  body.a4lp-print-root button svg,
+  body.a4lp-print-root [role="button"] svg,
+  body.a4lp-print-root [class*="byline" i] svg,
+  body.a4lp-print-root [class*="author" i] svg,
+  body.a4lp-print-root [class*="more-by" i] svg,
+  body.a4lp-print-root [class*="MoreBy" i] svg,
+  body.a4lp-print-root [class*="link" i] svg,
+  body.a4lp-print-root [class*="arrow" i] svg,
+  body.a4lp-print-root [class*="chevron" i] svg,
+  body.a4lp-print-root [class*="caret" i] svg,
+  body.a4lp-print-root [class*="icon" i] svg {
+    display: inline-block !important;
+    width: 1em !important;
+    height: 1em !important;
+    max-width: 1em !important;
+    max-height: 1em !important;
+    vertical-align: middle !important;
+    margin: 0 0 0 0.2em !important;
+  }
+  /* 没有 width/height 属性的 SVG 默认认作图标，限到 1.5em 见方 */
+  body.a4lp-print-root svg:not([width]):not([height]) {
+    max-width: 1.5em !important;
+    max-height: 1.5em !important;
+    width: 1.5em !important;
+    height: 1.5em !important;
+    display: inline-block !important;
+  }
+  /* <figure> 内的 SVG（图表 / 示意图）允许放大；用更高优先级覆盖上面的图标限制 */
+  body.a4lp-print-root figure svg,
+  body.a4lp-print-root figure picture svg {
+    max-width: 100% !important;
+    max-height: 255mm !important;
+    width: auto !important;
+    height: auto !important;
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  body.a4lp-print-root .a4lp-hide,
+  body.a4lp-print-root .a4lp-hide * { display: none !important; }
+  body.a4lp-print-root img,
+  body.a4lp-print-root picture,
+  body.a4lp-print-root svg,
+  body.a4lp-print-root video,
+  body.a4lp-print-root canvas {
+    /* 仍受 @media print 段里 max-height 255mm 限制 */
+    object-fit: contain !important;
+    object-position: center center !important;
   }
   .a4lp-main {
     font-size: 12pt !important;
@@ -246,6 +443,26 @@
     border-top: 1px solid #ccc;
     font-size: 10px;
     color: #666;
+  }
+  /* 封面 hero 图 —— 居中 / 自动适配，归档版尺寸更大像杂志封面，阅读版收紧 */
+  .a4lp-cover-hero {
+    margin: 8mm auto 10mm;
+    text-align: center;
+  }
+  .a4lp-cover-hero img {
+    display: block !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    max-height: 95mm !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  .a4lp-cover--reading .a4lp-cover-hero {
+    margin: 5mm auto 6mm;
+  }
+  .a4lp-cover--reading .a4lp-cover-hero img {
+    max-height: 50mm !important;
   }
   .a4lp-cover-source span {
     letter-spacing: 0.2em;

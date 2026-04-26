@@ -3,11 +3,12 @@
   "name": "Save Webpage to PDF",
   "version": "1.0.0",
   "description": "一键将当前网页保存为竖向 A4 PDF：自动抽取标题/作者/正文，图片不跨页、说明与图同页。",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "contextMenus", "storage"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "Save Webpage to PDF"
   },
+  "background": { "service_worker": "background.js" },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
