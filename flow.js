@@ -1,5 +1,6 @@
-// Auto-generated combined flow file. Idempotent — safe to inject multiple times.
-if (!window.__a4lpStart) (function () {
+// Auto-generated combined flow file. Safe to inject multiple times —— 每次都
+// 重新执行 IIFE 重写 window.__a4lpStart，避免扩展 reload 后老页面仍指向旧闭包。
+(function () {
 // ---- 站点规则白名单（按 host 字母序） ----
 const SITE_RULES = {
   'carnegieendowment.org': {
@@ -83,9 +84,10 @@ const SITE_RULES = {
     authorBio: '[class*="ContributorBio"], [class*="ContributorBlock"], [class*="contributor-bio"]',
     extraRemove: [
       // Listen 控件 —— 文本启发式不稳，直接用结构选择器删
-      '[class*="ListenButton" i]', '[class*="listen-button" i]', '[class*="AudioControls" i]',
+      'verso-listen-button',
+      '[class*="Listen" i]', '[class*="listen" i]', '[class*="ListenButton" i]', '[class*="listen-button" i]', '[class*="AudioControls" i]',
       '[class*="Listen" i][class*="Wrapper" i]', '[class*="Listen" i][class*="Bar" i]',
-      '[data-testid*="listen" i]', '[aria-label*="Listen to" i]', '[aria-label*="Play audio" i]',
+      '[data-testid*="listen" i]', '[data-attribute-verso-pattern*="listen" i]', '[aria-label*="Listen" i]', '[aria-label*="Listen to" i]', '[aria-label*="Play audio" i]',
       'button[aria-label*="Listen" i]', 'button[aria-label*="Play" i]',
       '[class*="ConsumerMarketingUnit"]',
       '[class*="Newsletter"]', '[class*="newsletter"]',
@@ -102,11 +104,23 @@ const SITE_RULES = {
     ].join(', ')
   },
   'wsj.com': {
-    main: 'section[subscriptions-section="content"], [data-module-id*="ArticleBody"], article[itemtype*="NewsArticle"] section.article-content, [class*="ArticleBody-module"] section, article section.article-content',
+    main: 'article[itemtype*="NewsArticle"], article, main article, section[subscriptions-section="content"], [data-module-id*="ArticleBody"], article[itemtype*="NewsArticle"] section.article-content, [class*="ArticleBody-module"] section, article section.article-content',
     title: 'h1[itemprop="headline"], h1',
     author: '[itemprop="author"], [class*="Byline"], [class*="byline"]',
     authorBio: '[class*="author-bio"], [class*="AuthorBio"], [data-module-id*="author-bio"], [class*="bylineBio"]',
     comments: '[id*="spotim"], [class*="spotim"], [data-spotim-module], [id^="conversation"], [id^="sp_message"]',
+    safeKeep: [
+      'article[itemtype*="NewsArticle"] figure:has(img)',
+      'article[itemtype*="NewsArticle"] picture:has(img)',
+      'article[itemtype*="NewsArticle"] [role="figure"]:has(img)',
+      'article[itemtype*="NewsArticle"] [data-module-id*="image" i]:has(img)',
+      'article[itemtype*="NewsArticle"] [data-module-id*="photo" i]:has(img)',
+      'article[itemtype*="NewsArticle"] [class*="ResponsiveThumbnail" i]:has(img)',
+      'article[itemtype*="NewsArticle"] [class*="Image" i]:has(img)',
+      'article[itemtype*="NewsArticle"] [class*="image" i]:has(img)',
+      'article[itemtype*="NewsArticle"] [class*="Media" i]:has(img)',
+      'article[itemtype*="NewsArticle"] [class*="media" i]:has(img)'
+    ].join(', '),
     disable: ['toc'],
     extraRemove: [
       // 听文 / 朗读 工具条
@@ -132,7 +146,7 @@ const SITE_RULES = {
       '[class*="EditorsPicks" i]', '[class*="BuySide" i]',
       '[class*="ContentRecommendation" i]', '[class*="Recirc" i]', '[class*="Recommendation" i]',
       '[class*="related-articles"]', '[class*="latest-news"]',
-      '[class*="VideoCarousel" i]', '[class*="ResponsiveThumbnail" i]',
+      '[class*="VideoCarousel" i]',
       // aria 兜底
       '[aria-label*="Latest" i]', '[aria-label*="Recommended" i]', '[aria-label*="Most popular" i]',
       '[aria-label*="What to Read" i]', '[aria-label*="More from" i]',
@@ -142,18 +156,163 @@ const SITE_RULES = {
   }
 };
 
+// ---- iframe 沙箱 CSS（Phase B：Economist 专用，后续可扩展到其他站）----
+// 自包含。iframe 文档完全脱离站点 CSS / 字体 / 动画 / aria-hidden 干扰，
+// 也不需要 print.css 里那一堆 ghost paint / 字体半加载 / display:flex 兜底。
+const IFRAME_CSS = `
+@page { size: A4 portrait; margin: 11mm 12mm 11mm 13mm; }
+@page :first { margin: 18mm 14mm; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: Georgia, "Times New Roman", "Noto Serif CJK SC", "Songti SC", serif;
+  font-size: 11.5pt; line-height: 1.62;
+  color: #161616; background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+.a4lp-source { font: 9.5pt/1.5 -apple-system, system-ui, sans-serif; color: #222; }
+
+.a4lp-cover {
+  page-break-after: always; break-after: page;
+  padding: 14mm 0 7mm; max-width: 166mm; margin: 0 auto;
+}
+.a4lp-cover-kicker {
+  font-size: 9.5pt; letter-spacing: 0.2em; text-transform: uppercase;
+  color: #888; margin-bottom: 14mm;
+}
+.a4lp-cover-title {
+  font-size: 22pt; line-height: 1.22; font-weight: 700; color: #111;
+  margin: 0 0 9mm; padding: 0; border: 0;
+}
+.a4lp-cover-by { font-size: 10.5pt; color: #444; margin-bottom: 8mm; letter-spacing: 0.04em; }
+.a4lp-cover-hero { margin: 8mm auto 10mm; text-align: center; }
+.a4lp-cover-hero img {
+  display: block; margin: 0 auto;
+  max-width: 100%; max-height: 95mm; width: auto; height: auto;
+  object-fit: contain;
+}
+.a4lp-cover-source {
+  margin-top: 10mm; padding-top: 5mm; border-top: 1px solid #ccc;
+  font-size: 9.5pt; color: #666;
+}
+.a4lp-cover-source span {
+  letter-spacing: 0.2em; text-transform: uppercase;
+  display: block; margin-bottom: 2mm;
+}
+.a4lp-cover-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #333; word-break: break-all; font-size: 9.5pt;
+}
+.a4lp-authors {
+  border: 1px solid #ddd; border-left: 3px solid #888;
+  padding: 8px 12px; margin: 8px 0 14px; background: #fafafa;
+  break-inside: avoid; page-break-inside: avoid;
+}
+.a4lp-authors-h {
+  font-size: 9.5pt; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #666; margin: 0 0 6px;
+}
+.a4lp-author { margin: 6px 0; break-inside: avoid; }
+.a4lp-author + .a4lp-author { border-top: 1px dotted #ccc; padding-top: 6px; }
+.a4lp-author-name { font-weight: 700; font-size: 10pt; color: #111; }
+.a4lp-author-role { color: #666; font-style: italic; font-size: 9.5pt; }
+.a4lp-author-bio { margin-top: 3px; color: #333; font-size: 9.5pt; line-height: 1.5; }
+
+.a4lp-toc {
+  border-top: 1px solid #bbb; border-bottom: 1px solid #bbb;
+  padding: 8px 0 10px; margin: 14mm 0 0;
+  break-inside: avoid; page-break-inside: avoid;
+}
+.a4lp-toc-h {
+  font-size: 10pt; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #444; margin: 0 0 6px;
+}
+.a4lp-toc-page {
+  break-before: page; page-break-before: always;
+  break-after: page; page-break-after: always;
+  padding-top: 6mm;
+}
+.a4lp-toc ul { list-style: none; margin: 0; padding: 0; }
+.a4lp-toc li { font-size: 9.75pt; line-height: 1.55; }
+.a4lp-toc-l1 { font-weight: 700; }
+.a4lp-toc-l2 { padding-left: 14px; }
+.a4lp-toc-l3 { padding-left: 28px; color: #555; }
+.a4lp-toc a { color: #111; text-decoration: none; display: block; }
+.a4lp-toc a::after {
+  content: leader('.') ' ' target-counter(attr(href url), page);
+  color: #666; font-variant-numeric: tabular-nums;
+}
+
+.a4lp-main { max-width: 158mm; margin: 0 auto; }
+.a4lp-main p, .a4lp-main li, .a4lp-main blockquote {
+  orphans: 3; widows: 3;
+}
+.a4lp-main p {
+  margin: 0 0 0.95em; break-inside: avoid; page-break-inside: avoid;
+}
+.a4lp-main h1, .a4lp-main h2, .a4lp-main h3, .a4lp-main h4, .a4lp-main h5, .a4lp-main h6 {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial,
+               "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  font-weight: 700; color: #101010; line-height: 1.3;
+  break-after: avoid; page-break-after: avoid;
+}
+.a4lp-main h2 { font-size: 14.5pt; margin: 1.6em 0 0.42em; }
+.a4lp-main h3 { font-size: 12.75pt; margin: 1.3em 0 0.32em; }
+.a4lp-main h4 { font-size: 11.75pt; margin: 1.2em 0 0.25em; }
+.a4lp-main blockquote {
+  margin: 1.1em 0; padding: 0.15em 0 0.15em 1em;
+  border-left: 3px solid #cfcfcf; color: #333; font-style: italic;
+  break-inside: avoid;
+}
+.a4lp-main figure, .a4lp-main .a4lp-keep {
+  break-inside: avoid; page-break-inside: avoid;
+  margin: 1em auto; text-align: center;
+}
+.a4lp-main img, .a4lp-main picture, .a4lp-main svg, .a4lp-main video, .a4lp-main canvas {
+  max-width: 185mm; max-height: 255mm; height: auto;
+  object-fit: contain; display: block; margin: 0 auto;
+}
+.a4lp-main img { display: inline-block; }
+.a4lp-main figure img, .a4lp-main figure picture img,
+.a4lp-main .a4lp-keep img { display: block; }
+.a4lp-main figcaption,
+.a4lp-main .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas) {
+  font-size: 9.75pt; line-height: 1.5; color: #555; margin-top: 0.4em;
+  break-before: avoid;
+}
+.a4lp-main ul, .a4lp-main ol { padding-left: 1.4em; margin: 0.3em 0 1em; }
+.a4lp-main li { margin: 0.18em 0; break-inside: avoid; }
+.a4lp-main pre, .a4lp-main pre code {
+  white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9.5pt; line-height: 1.45;
+}
+.a4lp-main pre { border: 1px solid #ddd; background: #fafafa; padding: 8px 10px; }
+.a4lp-main a, .a4lp-main code { word-break: break-word; overflow-wrap: anywhere; }
+.a4lp-main table { width: 100%; border-collapse: collapse; font-size: 9.75pt; margin: 1em 0; }
+.a4lp-main th, .a4lp-main td { border: 1px solid #ddd; padding: 6px 8px; vertical-align: top; }
+.a4lp-main tr { break-inside: avoid; page-break-inside: avoid; }
+`;
+
 // ---- PDF flow ----
 async function pdfFlow(SITE_RULES, options = {}) {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const withTimeout = (p, ms) => Promise.race([p, sleep(ms)]);
   const cleanupActions = [];
-  const layoutMode = options.layoutMode === 'archive' ? 'archive' : 'reading';
+  const layoutMode = 'archive';
   // 处理上一次打印异常留下的注入节点，避免封面/目录重复叠加。
   document.querySelectorAll('.a4lp-source').forEach(el => el.remove());
   document.querySelectorAll('.a4lp-hide').forEach(el => el.classList.remove('a4lp-hide'));
   document.querySelectorAll('.a4lp-safe').forEach(el => el.classList.remove('a4lp-safe'));
+  document.querySelectorAll('.a4lp-svg-icon, .a4lp-svg-graphic').forEach(el => {
+    el.classList.remove('a4lp-svg-icon', 'a4lp-svg-graphic');
+  });
   document.documentElement.classList.remove('a4lp-print-root');
-  document.body.classList.remove('a4lp-print-root', 'a4lp-mode-reading', 'a4lp-mode-archive');
+  document.body.classList.remove('a4lp-print-root', 'a4lp-mode-archive');
+  Array.from(document.body.classList).forEach(cls => {
+    if (cls.startsWith('a4lp-site-')) document.body.classList.remove(cls);
+  });
   document.querySelectorAll('.a4lp-main, .a4lp-comments, .a4lp-comments-start').forEach(el => {
     el.classList.remove('a4lp-main', 'a4lp-comments', 'a4lp-comments-start');
   });
@@ -249,6 +408,35 @@ async function pdfFlow(SITE_RULES, options = {}) {
   const SUPPORTED_PICTURE_TYPES = new Set([
     'image/avif', 'image/webp', 'image/png', 'image/jpeg', 'image/gif', 'image/svg+xml'
   ]);
+  const DATA_PLACEHOLDER_RE = /^data:image\/(?:gif|svg\+xml)/i;
+  const PLACEHOLDER_IMAGE_RE = /(placeholder|pixel|tracker|spacer|blank|fallback|default[-_]?image|generic[-_]?image|transparent)/i;
+  const DECORATIVE_IMAGE_RE = /(logo|icon|avatar|sprite|brand[-_]?image)/i;
+  const GRAPHIC_IMAGE_RE = /(chart|graph|table|diagram|infographic|map|equation|formula|qr|barcode|screenshot|code)/i;
+  const LAZY_DATA_SRC_KEYS = ['data-src', 'data-lazy-src', 'data-original', 'data-hi-res-src', 'data-fallback-src', 'data-image'];
+  const LAZY_DATA_SRCSET_KEYS = ['data-srcset', 'data-lazy-srcset', 'data-original-srcset'];
+  const getImageHint = (img, src) => [
+    src,
+    img?.alt || '',
+    img?.getAttribute?.('aria-label') || '',
+    img?.className && typeof img.className === 'string' ? img.className : '',
+    img?.closest?.('figure')?.className || '',
+    img?.closest?.('picture')?.className || '',
+    img?.parentElement?.className && typeof img.parentElement.className === 'string' ? img.parentElement.className : ''
+  ].join(' ').toLowerCase();
+  const isLikelyPlaceholderImage = (img, src = '') => {
+    const current = src || img?.currentSrc || img?.src || '';
+    const hint = getImageHint(img, current);
+    if (DATA_PLACEHOLDER_RE.test(current) && !GRAPHIC_IMAGE_RE.test(hint)) return true;
+    const w = img?.naturalWidth || parseFloat(img?.getAttribute?.('width') || '0') || 0;
+    const h = img?.naturalHeight || parseFloat(img?.getAttribute?.('height') || '0') || 0;
+    const isCNN = /(^|\.)cnn\.com$/i.test(location.hostname.replace(/^edition\./, ''));
+    if (isCNN && w && h && w <= 700 && h <= 420 && /cnn/.test(hint) && !/(mali|bamako|gunmen|qaeda|attack|reuters)/i.test(hint)) return true;
+    return PLACEHOLDER_IMAGE_RE.test(hint);
+  };
+  const absolutizeImageUrl = (value) => {
+    if (!value || DATA_PLACEHOLDER_RE.test(value)) return '';
+    try { return new URL(value, document.baseURI).href; } catch { return ''; }
+  };
   const parseSrcset = (srcset) => {
     if (!srcset || /^\s*data:/i.test(srcset)) return [];
     return srcset.split(',').map(part => {
@@ -281,6 +469,31 @@ async function pdfFlow(SITE_RULES, options = {}) {
     const targetDensity = 1.6;
     const sorted = [...candidates].sort((a, b) => a.density - b.density);
     return (sorted.find(c => c.density >= targetDensity) || sorted[sorted.length - 1]).url;
+  };
+  const pickLargestFromSrcset = (srcset) => {
+    const candidates = parseSrcset(srcset);
+    if (!candidates.length) return '';
+    const sorted = [...candidates].sort((a, b) => (a.width || a.density) - (b.width || b.density));
+    return sorted[sorted.length - 1].url || '';
+  };
+  const getBestImageUrl = (img) => {
+    const push = (urls, value) => {
+      const url = absolutizeImageUrl(value);
+      if (url) urls.push(url);
+    };
+    const urls = [];
+    push(urls, img?.currentSrc);
+    push(urls, img?.src);
+    if (img?.hasAttribute?.('srcset')) push(urls, pickBestFromSrcset(img.getAttribute('srcset'), img));
+    for (const k of LAZY_DATA_SRC_KEYS) push(urls, img?.getAttribute?.(k));
+    const pic = img?.closest?.('picture');
+    if (pic) {
+      pic.querySelectorAll('source').forEach(source => {
+        const srcset = source.getAttribute('srcset') || source.getAttribute('data-srcset') || source.getAttribute('data-lazy-srcset') || '';
+        push(urls, pickBestFromSrcset(srcset, img) || pickLargestFromSrcset(srcset));
+      });
+    }
+    return [...new Set(urls)].find(url => !isLikelyPlaceholderImage(img, url)) || '';
   };
   const matchesPictureSource = (source) => {
     const media = (source.getAttribute('media') || '').trim();
@@ -324,8 +537,6 @@ async function pdfFlow(SITE_RULES, options = {}) {
   // data-src / data-srcset / data-original / data-hi-res-src 上挂真实 URL，
   // 等 IO 触发才 swap。无条件把 data-* 上能找到的真实 URL 回填到 src/srcset
   // —— 即使现有 src 看起来正常，我们也宁愿强制刷新以保证打印之前请求已发出。
-  const LAZY_DATA_SRC_KEYS = ['data-src', 'data-lazy-src', 'data-original', 'data-hi-res-src', 'data-fallback-src', 'data-image'];
-  const LAZY_DATA_SRCSET_KEYS = ['data-srcset', 'data-lazy-srcset', 'data-original-srcset'];
   document.querySelectorAll('img').forEach(img => {
     let realSrc = '';
     for (const k of LAZY_DATA_SRC_KEYS) {
@@ -370,8 +581,9 @@ async function pdfFlow(SITE_RULES, options = {}) {
         }
       });
     }
-    const currentLooksBroken = !img.currentSrc ||
-      /^data:image\/(?:gif|svg\+xml);/i.test(img.currentSrc) ||
+    const currentLooksBroken = isLikelyPlaceholderImage(img) ||
+      !img.currentSrc ||
+      DATA_PLACEHOLDER_RE.test(img.currentSrc) ||
       (img.complete && img.naturalWidth > 0 && img.naturalWidth <= 4 && img.naturalHeight <= 4);
     if (realSrc && (currentLooksBroken || !img.getAttribute('src') || /^data:image\/(?:gif|svg\+xml);/i.test(img.getAttribute('src') || ''))) {
       rememberAttr(img, 'src');
@@ -432,12 +644,13 @@ async function pdfFlow(SITE_RULES, options = {}) {
     // 已经正常加载的图：完全不动 —— 之前会清掉 srcset 强制回退到 img.src，
     // 但很多站点（WSJ/CSIS 等）img.src 是占位 1×1 gif，srcset 才指向真图，
     // 一清就让 currentSrc 退回到占位，naturalWidth=1，被 0f 当失败图隐藏掉。
-    if (img.complete && img.naturalWidth >= 50) return;
+    if (img.complete && img.naturalWidth >= 50 && !isLikelyPlaceholderImage(img)) return;
     const tryUrls = [];
     const push = (u) => {
       if (!u) return;
-      if (/^data:image\/(?:gif|svg\+xml);/i.test(u)) return;
-      try { tryUrls.push(new URL(u, document.baseURI).href); } catch {}
+      if (DATA_PLACEHOLDER_RE.test(u)) return;
+      const url = absolutizeImageUrl(u);
+      if (url) tryUrls.push(url);
     };
     push(img.currentSrc);
     push(img.src);
@@ -451,7 +664,8 @@ async function pdfFlow(SITE_RULES, options = {}) {
       });
     }
     let blob = null;
-    for (const url of [...new Set(tryUrls)]) {
+    const uniqueUrls = [...new Set(tryUrls)];
+    for (const url of uniqueUrls) {
       try {
         const r = await Promise.race([
           fetch(url, { credentials: 'include' }),
@@ -462,7 +676,21 @@ async function pdfFlow(SITE_RULES, options = {}) {
         if (b && b.size > 200 && /^image\//i.test(b.type || '')) { blob = b; break; }
       } catch {}
     }
-    if (!blob) return;
+    if (!blob) {
+      const fallbackUrl = uniqueUrls[0];
+      if (!fallbackUrl) return;
+      if (pic) {
+        pic.querySelectorAll('source').forEach(s => {
+          rememberAttr(s, 'srcset');
+          s.setAttribute('srcset', '');
+        });
+      }
+      rememberAttr(img, 'src');
+      if (img.hasAttribute('srcset')) { rememberAttr(img, 'srcset'); img.setAttribute('srcset', ''); }
+      img.src = fallbackUrl;
+      try { await img.decode(); } catch {}
+      return;
+    }
     const blobUrl = URL.createObjectURL(blob);
     cleanupActions.push(() => { try { URL.revokeObjectURL(blobUrl); } catch {} });
     if (pic) {
@@ -488,7 +716,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   document.querySelectorAll('img').forEach(img => {
     const wrap = img.closest('figure, picture, .a4lp-keep');
     if (!wrap) return;
-    if (img.complete && img.naturalWidth >= 16) return;
+    if (img.complete && img.naturalWidth >= 16 && !isLikelyPlaceholderImage(img)) return;
     wrap.classList.add('a4lp-hide');
   });
 
@@ -497,17 +725,9 @@ async function pdfFlow(SITE_RULES, options = {}) {
     const base64Len = comma >= 0 ? (dataUrl.length - comma - 1) : dataUrl.length;
     return Math.ceil(base64Len * 0.75);
   };
-  const getImageHint = (img, src) => [
-    src,
-    img.alt || '',
-    img.getAttribute('aria-label') || '',
-    img.className && typeof img.className === 'string' ? img.className : '',
-    img.closest('figure')?.className || '',
-    img.closest('picture')?.className || ''
-  ].join(' ').toLowerCase();
   const isLikelyGraphicImage = (img, src) => {
     const hint = getImageHint(img, src);
-    return /(logo|icon|avatar|chart|graph|table|diagram|infographic|map|equation|formula|qr|barcode|screenshot|code)/i.test(hint);
+    return DECORATIVE_IMAGE_RE.test(hint) || GRAPHIC_IMAGE_RE.test(hint);
   };
   // 0c. 大图做更积极的重采样与重编码，优先压缩照片；跨域或不可导出图片会自动跳过。
   const compressHugeImage = (img) => {
@@ -578,6 +798,9 @@ async function pdfFlow(SITE_RULES, options = {}) {
   // 1. 抽取内容（标题/作者/作者介绍/正文/评论）+ 站点豁免（safeKeep / disable）
   const { titleEl, mainEl, commentEls, extraRemove, authorText: extractedAuthorText, authorBios, authorBioEls, safeKeep, disable, rulesMatchedHost } = pickContent(SITE_RULES);
   let authorText = extractedAuthorText;
+  // 必须在 moveEconomistPreLeadToCover() 之前定义 —— 该函数闭包引用 titleText，
+  // 而它在 5d 阶段（line ~1039）就被调用，比下方"封面页"代码块更早。
+  const titleText = (titleEl?.innerText || document.title || '').trim();
   const off = (key) => Array.isArray(disable) && disable.includes(key);
   const isWSJ = rulesMatchedHost === 'wsj.com';
   const isNY = rulesMatchedHost === 'newyorker.com';
@@ -586,10 +809,16 @@ async function pdfFlow(SITE_RULES, options = {}) {
   const isCNN = rulesMatchedHost === 'cnn.com';
   const isCarnegie = rulesMatchedHost === 'carnegieendowment.org';
   const isCSIS = rulesMatchedHost === 'csis.org';
+  if (rulesMatchedHost) {
+    rememberClass(document.body, 'a4lp-site-' + rulesMatchedHost.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase());
+  }
   const normalizeText = (s) => (s || '').replace(/\s+/g, ' ').trim();
   const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const FA_AUTHOR_BIO_RE = /^[A-Z][A-Za-z.'’\-]+(?:\s+[A-Z][A-Za-z.'’\-]+){1,4}\s+(?:(?:is|was|has been)\s+(?:an?|the\s+)?[^.]{0,120}\b(?:director|professor|fellow|scholar|analyst|expert|correspondent|writer|editor|columnist|chair|researcher|journalist|author)\b|holds\s+(?:an?|the\s+)?[^.]{0,120}\b(?:chair|professorship|position|post|fellowship)\b|serves\s+as\b|served\s+as\b|writes\b|covers\b|directs\b|leads\b|teaches\b|researches\b|specializes\b)/i;
   const leadBodyP = mainEl ? Array.from(mainEl.querySelectorAll('p')).find(p => {
     const text = normalizeText(p.innerText || p.textContent || '');
+    if (authorBioEls.some(bio => bio === p || bio.contains(p))) return false;
+    if (isFA && FA_AUTHOR_BIO_RE.test(text)) return false;
     return text.length >= 100 && !/^(by\b|updated\b|listen\b|story by\b|more by\b|photo illustration by\b)/i.test(text);
   }) : null;
   const leadBodyTop = leadBodyP?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
@@ -599,12 +828,12 @@ async function pdfFlow(SITE_RULES, options = {}) {
                 // Listen 控件文本前常带播放图标字符（▶ ▷ ► ◇ 或别的私有区图标），
                 // 因此允许任意 0-3 个非字母前缀字符再接 "Listen"
                 /^[^A-Za-z0-9]{0,3}\s*Listen(?:\s*[•·|]\s*\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?))?\s*$/i] : []),
-    ...(isFA ? [/^More by\b/i] : [])
+    ...(isFA ? [/^More by\b/i, FA_AUTHOR_BIO_RE] : []),
+    ...(isCSIS ? [/^Critical Questions by(?:\s+Published\b.*)?$/i, /^Published\s+[A-Z][a-z]+\s+\d{1,2},\s+\d{4}$/i] : [])
   ];
   const TAIL_START_TEXT = [
     ...(isEconomist ? [/^Explore more$/i, /^For more on the latest\b/i, /^This article appeared in the .* print edition\b/i, /^From the .* edition$/i, /^Discover stories from this section\b/i, /^⇒?\s*Explore the edition$/i, /^More from [A-Z]/i] : []),
-    ...(isCarnegie && layoutMode === 'reading' ? [/^Acknowledgments$/i, /^About the Author$/i, /^Notes$/i, /^More Work from Carnegie Endowment for International Peace$/i] : []),
-    ...(isCarnegie && layoutMode === 'archive' ? [/^More Work from Carnegie Endowment for International Peace$/i] : []),
+    ...(isCarnegie ? [/^More Work from Carnegie Endowment for International Peace$/i] : []),
     // FA：只匹配 "More by ..." 锚点。之前用 "Firstname Lastname is/holds/..."
     // 启发式会误伤正文中引用专家的段落（FA 经常这么写），导致整篇被裁掉。
     ...(isFA ? [/^More by\b/i] : []),
@@ -798,6 +1027,98 @@ async function pdfFlow(SITE_RULES, options = {}) {
     if (!leadBodyP) return true;
     return !!(el.compareDocumentPosition(leadBodyP) & Node.DOCUMENT_POSITION_PRECEDING);
   };
+  const coverMetaItems = [];
+  const forceHideNode = (target) => {
+    if (!target || isSafe(target) || target.closest('.a4lp-hide')) return;
+    rememberAttr(target, 'style');
+    target.style.setProperty('display', 'none', 'important');
+    target.classList.add('a4lp-hide');
+  };
+  const moveEconomistPreLeadToCover = () => {
+    if (!isEconomist || !leadBodyP || !mainEl) return;
+    const seenText = new Set();
+    const addText = (text) => {
+      const lines = normalizeText(text)
+        .split(/\s*(?:\n| {2,})\s*/)
+        .map(s => normalizeText(s))
+        .filter(Boolean);
+      lines.forEach(line => {
+        if (line.length < 4 || line.length > 220) return;
+        if (titleText && line.toLowerCase() === titleText.toLowerCase()) return;
+        if (/^(saved webpage|source|https?:\/\/|www\.)/i.test(line)) return;
+        if (seenText.has(line.toLowerCase())) return;
+        seenText.add(line.toLowerCase());
+        coverMetaItems.push(line);
+      });
+    };
+    let cur = leadBodyP;
+    while (cur && cur !== mainEl && cur !== document.body) {
+      let sib = cur.previousElementSibling;
+      while (sib) {
+        const prev = sib.previousElementSibling;
+        if (!isSafe(sib) && !sib.contains(leadBodyP)) {
+          addText(sib.innerText || sib.textContent || '');
+          forceHideNode(sib);
+        }
+        sib = prev;
+      }
+      cur = cur.parentElement;
+    }
+    if (coverMetaItems.length > 3) coverMetaItems.length = 3;
+  };
+  const hideNYPreLeadWidgets = () => {
+    if (!isNY || !leadBodyP || !Number.isFinite(leadBodyTop)) return;
+    const leadRect = leadBodyP.getBoundingClientRect();
+    const titleBottom = titleEl?.getBoundingClientRect().bottom ?? Number.NEGATIVE_INFINITY;
+    let cur = leadBodyP;
+    while (cur && cur !== mainEl && cur !== document.body) {
+      let sib = cur.previousElementSibling;
+      while (sib) {
+        const prev = sib.previousElementSibling;
+        if (!isSafe(sib) && !sib.contains(leadBodyP) && !(titleEl && sib.contains(titleEl))) {
+          forceHideNode(sib);
+        }
+        sib = prev;
+      }
+      cur = cur.parentElement;
+    }
+    const scopes = new Set([mainEl, titleEl?.closest('header, article, main, section')].filter(Boolean));
+    const seen = new WeakSet();
+    scopes.forEach(scope => {
+      scope.querySelectorAll('*').forEach(el => {
+        if (seen.has(el)) return;
+        seen.add(el);
+        if (isSafe(el) || el.closest('.a4lp-hide')) return;
+        if (el === leadBodyP || el.contains(leadBodyP)) return;
+        if (titleEl && (el === titleEl || el.contains(titleEl))) return;
+        const rect = el.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        if (rect.bottom > leadRect.top + 10) return;
+        if (rect.top < titleBottom - 40) return;
+        if (rect.height > 96 || rect.width > 560) return;
+        if (el.querySelector('p, h1, h2, h3, article, figure, picture, img')) return;
+        const text = normalizeText(el.innerText || el.textContent || '');
+        if (text.length > 220) return;
+        const marker = [
+          el.tagName,
+          el.id || '',
+          el.className && typeof el.className === 'string' ? el.className : '',
+          el.getAttribute?.('role') || '',
+          el.getAttribute?.('aria-label') || '',
+          el.getAttribute?.('data-testid') || '',
+          el.getAttribute?.('data-attribute-verso-pattern') || ''
+        ].join(' ');
+        const interactive = /button|audio|listen|play|toolbar|action|control|verso/i.test(marker) ||
+          el.matches('button, a, [role="button"], svg, verso-listen-button') ||
+          !!el.querySelector('button, a, [role="button"], svg, verso-listen-button') ||
+          getComputedStyle(el).cursor === 'pointer';
+        const listenText = /\bListen\b/i.test(text) || /\b\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?)\b/i.test(text);
+        const emptyWidget = !text && rect.height >= 14 && rect.width >= 24;
+        if (!interactive && !listenText && !emptyWidget) return;
+        forceHideNode(bubbleHideTarget(el, 2.4, 420));
+      });
+    });
+  };
   const hideLeadMatches = (patterns) => {
     if (!patterns.length || !Number.isFinite(leadBodyTop)) return;
     // 同时扫 mainEl 与 titleEl 的 header/article 祖先 —— CNN/NY 的 UPDATED /
@@ -809,7 +1130,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     if (!scopes.size) return;
     const seen = new WeakSet();
     scopes.forEach(scope => {
-      scope.querySelectorAll('p, div, span, small, h2, h3, h4, section, header, figure, figcaption, li, time, button, a[role="button"]').forEach(el => {
+      scope.querySelectorAll('p, div, span, small, h2, h3, h4, section, header, figure, figcaption, li, time, button, a').forEach(el => {
         if (seen.has(el)) return;
         seen.add(el);
         if (isSafe(el) || el.closest('.a4lp-hide')) return;
@@ -857,6 +1178,8 @@ async function pdfFlow(SITE_RULES, options = {}) {
     if (candidates.length) hideFromNodeToEnd(candidates[0]);
   };
   if (FRONT_MATTER_TEXT.length) hideLeadMatches(FRONT_MATTER_TEXT);
+  hideNYPreLeadWidgets();
+  moveEconomistPreLeadToCover();
   if (TAIL_START_TEXT.length) stripFromMarker(TAIL_START_TEXT);
 
   // 5d. 邻近段落"半字重复"修复：Economist 等站点会把同一段落渲染两次（一份正常、
@@ -899,24 +1222,45 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
   // 5d.5 全局 Listen 兜底（前缀匹配 + 必须含数字 + 短文本，children 限制取消，
   // 兼容 ZWSP/NBSP 等怪异空白；定义为函数 sweepListen 以便末尾再扫一次。）
-  const LISTEN_PREFIX_RE = /^[^A-Za-z0-9]{0,3}\s*Listen\b/i;
+  const LISTEN_PREFIX_RE = /^[^A-Za-z0-9]{0,6}\s*Listen\b/i;
+  const LISTEN_TIME_RE = /\bListen\b[\s\S]{0,90}\b\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?)\b/i;
   const sweepListen = () => {
     // 全节点扫描（不限标签）—— NY 的 Listen 控件可能是 <verso-listen-button>
     // 或 ::before content 注入文本，常规标签匹配不到。
     const norm = (s) => (s || '').replace(/[\s​‌‍ ]+/g, ' ').trim();
+    if (isNY) {
+      document.querySelectorAll([
+        'verso-listen-button',
+        '[class*="Listen" i]',
+        '[class*="listen" i]',
+        '[data-testid*="listen" i]',
+        '[data-attribute-verso-pattern*="listen" i]',
+        '[aria-label*="Listen" i]',
+        '[aria-label*="audio" i]',
+        'button[aria-label*="Play" i]',
+        '[role="button"][aria-label*="Play" i]'
+      ].join(', ')).forEach(el => forceHideNode(bubbleHideTarget(el, 2.6, 420)));
+    }
     const ownText = (el) => {
       let t = '';
       for (const n of el.childNodes) if (n.nodeType === 3) t += n.nodeValue;
       return norm(t);
     };
     const fullText = (el) => norm(el.innerText || el.textContent || '');
-    const matchesListen = (s) => !!s && s.length <= 50 && LISTEN_PREFIX_RE.test(s) && /\d/.test(s);
+    const matchesListen = (s) => !!s && s.length <= 120 &&
+      ((LISTEN_PREFIX_RE.test(s) && /(\d|minute|min|audio)/i.test(s)) || LISTEN_TIME_RE.test(s));
     document.querySelectorAll('body *').forEach(el => {
       if (isSafe(el) || el.closest('.a4lp-hide')) return;
       const ft = fullText(el);
-      if (ft.length > 200) return;
       const ot = ownText(el);
-      let hit = matchesListen(ot) || (matchesListen(ft) && el.children.length <= 6);
+      const head = norm(ft.slice(0, 240));
+      const compactListenBlock = isNY &&
+        ft.length <= 1200 &&
+        el.children.length <= 24 &&
+        !el.querySelector('p, h1, h2, h3, article') &&
+        LISTEN_TIME_RE.test(head);
+      if (ft.length > 260 && !compactListenBlock) return;
+      let hit = matchesListen(ot) || (matchesListen(ft) && el.children.length <= 12) || compactListenBlock;
       if (!hit) {
         try {
           const stripQuote = (s) => (s || '').replace(/^['"]|['"]$/g, '').trim();
@@ -934,10 +1278,11 @@ async function pdfFlow(SITE_RULES, options = {}) {
         const baseLen = Math.max(ft.length, ot.length, 16);
         if (pText.length <= baseLen + 120) target = p; else break;
       }
-      target.classList.add('a4lp-hide');
+      forceHideNode(target);
     });
   };
   sweepListen();
+  hideNYPreLeadWidgets();
 
 
 
@@ -1076,14 +1421,32 @@ async function pdfFlow(SITE_RULES, options = {}) {
 
   // 7. 封面页（标题/作者卡/SOURCE/日期）+ 独立目录页，一并插到 body 最前
   const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const titleText = (titleEl?.innerText || document.title || '').trim();
   const today = new Date();
   const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   const sourceHost = location.hostname.replace(/^www\./, '');
-  const inlineSource = sourceHost + (location.pathname && location.pathname !== '/' ? location.pathname : '');
-  const filenameSuffix = layoutMode === 'archive' ? ' - archive' : ' - reading';
-  const basePrintTitle = (titleText || document.title || 'saved-webpage').replace(/\s+-\s+(reading|archive)$/i, '').trim();
-  const printTitle = basePrintTitle + filenameSuffix;
+  const PUBLICATION_PREFIX_BY_HOST = {
+    'carnegieendowment.org': 'Carnegie',
+    'cnn.com': 'CNN',
+    'csis.org': 'CSIS',
+    'economist.com': 'The Economist',
+    'foreignaffairs.com': 'Foreign Affairs',
+    'newyorker.com': 'New Yorker',
+    'wsj.com': 'WSJ'
+  };
+  const fallbackPublicationPrefix = sourceHost.split('.').find(Boolean) || 'web';
+  const publicationPrefix = PUBLICATION_PREFIX_BY_HOST[rulesMatchedHost] || fallbackPublicationPrefix;
+  const knownTitlePrefixes = [
+    ...Object.values(PUBLICATION_PREFIX_BY_HOST),
+    'CEIP', 'ECON', 'FA', 'NYer'
+  ];
+  let basePrintTitle = (titleText || document.title || 'saved-webpage').replace(/\s+-\s+(reading|archive)$/i, '').trim();
+  knownTitlePrefixes.forEach(prefix => {
+    basePrintTitle = basePrintTitle.replace(new RegExp('^' + escapeRegex(prefix) + '\\s*[-:：]\\s*', 'i'), '').trim();
+  });
+  const prefixedPrintTitle = publicationPrefix && !new RegExp('^' + escapeRegex(publicationPrefix) + '\\s*[-:：]\\s*', 'i').test(basePrintTitle)
+    ? publicationPrefix + ' - ' + basePrintTitle
+    : basePrintTitle;
+  const printTitle = prefixedPrintTitle;
   if (document.title !== printTitle) {
     const prevTitle = document.title;
     document.title = printTitle;
@@ -1100,46 +1463,100 @@ async function pdfFlow(SITE_RULES, options = {}) {
   // 站点占位图明确加入黑名单。
   let coverHeroSrc = '';
   let coverHeroEl = null;
-  const HERO_REJECT_RE = /(logo|icon|avatar|sprite|placeholder|pixel|tracker|spacer|blank|fallback|default[-_]?image|share[-_]?image|og[-_]?image|opengraph|cnn-?fallback|brand[-_]?image|generic[-_]?image)/i;
+  const HERO_REJECT_RE = new RegExp(DECORATIVE_IMAGE_RE.source + '|' + PLACEHOLDER_IMAGE_RE.source, 'i');
+  const HERO_GRAPHIC_RE = /\b(?:fig(?:ure)?|table|chart|graph|exhibit)\s*\.?\s*\d+\b|survey|respondents|percentage|percent|magnitude and direction|workforce impact|perspectives on ai/i;
+  const META_HERO_REJECT_RE = /(logo|icon|avatar|sprite|placeholder|pixel|tracker|spacer|blank|fallback|default[-_]?image|generic[-_]?image|transparent)/i;
+  const getMetaHeroSrc = () => {
+    const selectors = [
+      'meta[property="og:image:secure_url"]',
+      'meta[property="og:image:url"]',
+      'meta[property="og:image"]',
+      'meta[name="twitter:image:src"]',
+      'meta[name="twitter:image"]',
+      'link[rel~="image_src" i]'
+    ];
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      const raw = el?.getAttribute('content') || el?.getAttribute('href') || '';
+      const url = absolutizeImageUrl(raw);
+      if (!url) continue;
+      if (META_HERO_REJECT_RE.test(url.toLowerCase())) continue;
+      return url;
+    }
+    return '';
+  };
+  const getHeroHint = (img, src) => {
+    const fig = img?.closest?.('figure');
+    const figText = normalizeText(fig?.innerText || fig?.textContent || '').slice(0, 500);
+    const caption = normalizeText(fig?.querySelector?.('figcaption, [class*="caption" i], [class*="Caption" i]')?.innerText || '').slice(0, 300);
+    return [
+      getImageHint(img, src),
+      figText,
+      caption,
+      img?.getAttribute?.('data-testid') || '',
+      img?.closest?.('[data-module-id]')?.getAttribute('data-module-id') || ''
+    ].join(' ').toLowerCase();
+  };
+  const metaHeroSrc = getMetaHeroSrc();
+  if (isCarnegie && metaHeroSrc && !HERO_GRAPHIC_RE.test(metaHeroSrc)) {
+    coverHeroSrc = metaHeroSrc;
+  }
   const heroSearchScope = (mainEl?.closest('article')) || document.querySelector('article, main') || mainEl;
-  if (heroSearchScope) {
-    const heroCandidate = Array.from(heroSearchScope.querySelectorAll('img')).find(img => {
+  if (!coverHeroSrc && heroSearchScope) {
+    const heroCandidates = Array.from(heroSearchScope.querySelectorAll('img')).map(img => {
       if (img.closest('.a4lp-hide')) return false;
-      if (!img.complete || img.naturalWidth < 240 || img.naturalHeight < 160) return false;
-      const aspect = img.naturalWidth / img.naturalHeight;
-      if (aspect < 0.4 || aspect > 4.5) return false;
-      const src = img.currentSrc || img.src;
+      if (isLikelyPlaceholderImage(img)) return false;
+      const src = getBestImageUrl(img);
       if (!src || /^data:image\/(?:gif|svg\+xml);/i.test(src)) return false;
-      const hint = (src + ' ' + (img.alt || '') + ' ' + (img.className || '') + ' ' + ((img.parentElement && img.parentElement.className) || '')).toLowerCase();
+      const hint = getHeroHint(img, src);
       if (HERO_REJECT_RE.test(hint)) return false;
-      return true;
-    });
+      if (GRAPHIC_IMAGE_RE.test(hint) || HERO_GRAPHIC_RE.test(hint)) return false;
+      const width = img.naturalWidth || parseFloat(img.getAttribute('width') || '0') || img.getBoundingClientRect().width || 0;
+      const height = img.naturalHeight || parseFloat(img.getAttribute('height') || '0') || img.getBoundingClientRect().height || 0;
+      if (width && height) {
+        if (width < 240 || height < 120) return false;
+        const aspect = width / height;
+        if (aspect < 0.35 || aspect > 5.2) return false;
+      }
+      const rect = img.getBoundingClientRect();
+      const titleRect = titleEl?.getBoundingClientRect();
+      let score = 0;
+      if (img.closest('figure, picture')) score += 40;
+      if (mainEl && mainEl.contains(img)) score += 25;
+      if (titleRect && rect.top >= titleRect.bottom - 120 && rect.top <= titleRect.bottom + 900) score += 35;
+      if (rect.top >= -200 && rect.top <= window.innerHeight * 2) score += 20;
+      if (rect.top > window.innerHeight * 2) score -= Math.min(60, rect.top / 900);
+      score += Math.min(40, ((width || rect.width || 0) * (height || rect.height || 0)) / 50000);
+      return { img, src, score };
+    }).filter(Boolean).sort((a, b) => b.score - a.score);
+    const heroCandidate = heroCandidates[0]?.img || null;
     if (heroCandidate) {
-      coverHeroSrc = heroCandidate.currentSrc || heroCandidate.src;
+      coverHeroSrc = heroCandidates[0].src;
       coverHeroEl = heroCandidate;
     }
   }
+  if (!coverHeroSrc) coverHeroSrc = metaHeroSrc;
   // 同时把所有 fallback/占位图全局隐藏 —— 它们不该出现在正文里污染版面
   document.querySelectorAll('img').forEach(img => {
     const src = img.currentSrc || img.src || '';
     if (!src) return;
     const hint = (src + ' ' + (img.alt || '') + ' ' + (img.className || '') + ' ' + ((img.parentElement && img.parentElement.className) || '')).toLowerCase();
-    if (HERO_REJECT_RE.test(hint) && !/(logo|icon)\s*$/i.test(img.alt || '')) {
+    if ((HERO_REJECT_RE.test(hint) || isLikelyPlaceholderImage(img, src)) && !/(logo|icon)\s*$/i.test(img.alt || '')) {
       const wrap = img.closest('figure, picture, .a4lp-keep') || img;
       wrap.classList.add('a4lp-hide');
     }
   });
 
-  // 7a. 封面页 / 阅读版抬头
+  // 7a. 封面页
   let html = '<section class="a4lp-cover a4lp-cover--' + layoutMode + '">' +
     '<div class="a4lp-cover-kicker">' +
-      (layoutMode === 'archive' ? 'SAVED WEBPAGE · ' + escapeHtml(dateStr) : 'READING COPY · ' + escapeHtml(dateStr)) +
+      'SAVED WEBPAGE · ' + escapeHtml(dateStr) +
     '</div>' +
     (titleText ? '<h1 class="a4lp-cover-title">' + escapeHtml(titleText) + '</h1>' : '') +
     (authorText ? '<div class="a4lp-cover-by">BY ' + escapeHtml(authorText) + '</div>' : '') +
     (coverHeroSrc ? '<div class="a4lp-cover-hero"><img src="' + escapeHtml(coverHeroSrc) + '" alt="" loading="eager" decoding="sync" fetchpriority="high"></div>' : '');
 
-  if (layoutMode === 'archive' && authorBios && authorBios.length) {
+  if (authorBios && authorBios.length) {
     html += '<div class="a4lp-authors"><div class="a4lp-authors-h">作者介绍 / Authors</div>';
     authorBios.forEach(b => {
       html += '<div class="a4lp-author">';
@@ -1152,7 +1569,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
 
   html += '<div class="a4lp-cover-source"><span>SOURCE</span><div class="a4lp-cover-url">' +
-    escapeHtml(layoutMode === 'archive' ? location.href : inlineSource) +
+    escapeHtml(location.href) +
     '</div></div>';
 
   // 7b. 自动目录：短目录内联；长目录独立分页
@@ -1171,7 +1588,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     return (p.innerText || '').trim().length >= 100;
   }) : null;
   const headingChars = headings.reduce((sum, h) => sum + (h.innerText || '').trim().length, 0);
-  const tocMinHeadings = layoutMode === 'archive' ? 3 : 4;
+  const tocMinHeadings = 3;
   const separateToc = headings.length > 8 || headingChars > 280;
   const renderToc = () => {
     if (off('toc')) return '';
@@ -1200,12 +1617,29 @@ async function pdfFlow(SITE_RULES, options = {}) {
   insertHost.innerHTML = html;
   document.body.insertBefore(insertHost, document.body.firstChild);
 
-  // 7d. 隐藏正文中的原 <h1> + 已经搬上封面的 hero 图，避免与封面重复
-  if (coverHeroEl) {
-    const wrap = coverHeroEl.closest('figure, picture, .a4lp-keep') || coverHeroEl;
-    wrap.classList.add('a4lp-hide');
-  }
+  // 7d. 隐藏正文中的原 <h1>。正文图片保留，避免封面复用首图后正文内嵌图片缺失。
   if (titleEl) titleEl.classList.add('a4lp-hide');
+
+  // 7e. CSIS / Carnegie：封面 hero 图与正文首图视觉一致，导致封面 + 第 2 页
+  // 重复同一张大图。两站结构都是「正文容器开头一张 figure/img 就是 hero」，
+  // 直接隐藏 mainEl 内第一张内容图（不再依赖 coverHeroEl —— Carnegie 走
+  // og:image 路径，coverHeroEl 始终为 null）。仅这两站启用。
+  if ((isCSIS || isCarnegie) && mainEl) {
+    const firstImgWrap = (() => {
+      const candidates = mainEl.querySelectorAll('figure, picture, .a4lp-keep, img');
+      for (const node of candidates) {
+        if (node.closest('.a4lp-source') || node.closest('.a4lp-hide')) continue;
+        // 跳过明显的 logo/icon（很小或 hint 含 logo/icon）
+        if (node.tagName === 'IMG') {
+          const w = node.naturalWidth || node.getBoundingClientRect().width || 0;
+          if (w && w < 240) continue;
+        }
+        return node.closest('figure, picture, .a4lp-keep') || node;
+      }
+      return null;
+    })();
+    if (firstImgWrap) firstImgWrap.classList.add('a4lp-hide');
+  }
 
   // 7c. 诊断日志
   console.log('[Save Webpage to PDF] extraction', {
@@ -1253,6 +1687,28 @@ async function pdfFlow(SITE_RULES, options = {}) {
   });
   } // /figureGroup
 
+  // 8b. SVG 按图标/图表分流。这类问题来自浏览器打印布局阶段，
+  // 必须在 window.print() 前打标。
+  document.querySelectorAll('svg').forEach(svg => {
+    if (svg.closest('.a4lp-source')) return;
+    const marker = [
+      svg.id || '',
+      svg.className && typeof svg.className.baseVal === 'string' ? svg.className.baseVal : '',
+      svg.getAttribute('role') || '',
+      svg.getAttribute('aria-label') || '',
+      svg.closest('figure, .a4lp-keep') ? 'figure' : ''
+    ].join(' ').toLowerCase();
+    const viewBox = svg.viewBox && svg.viewBox.baseVal;
+    const attrWidth = parseFloat(svg.getAttribute('width') || '0') || 0;
+    const attrHeight = parseFloat(svg.getAttribute('height') || '0') || 0;
+    const hasContentGraphics = !!svg.querySelector('image, text, foreignObject');
+    const largeBox = !!viewBox && (viewBox.width > 96 || viewBox.height > 96);
+    const graphic = svg.closest('figure, .a4lp-keep') ||
+      GRAPHIC_IMAGE_RE.test(marker) ||
+      (hasContentGraphics && (largeBox || attrWidth > 120 || attrHeight > 80));
+    rememberClass(svg, graphic ? 'a4lp-svg-graphic' : 'a4lp-svg-icon');
+  });
+
   // 9. 清理标记与临时 DOM 变更
   let cleaned = false;
   const cleanup = () => {
@@ -1280,9 +1736,101 @@ async function pdfFlow(SITE_RULES, options = {}) {
   // 末尾再扫一次 Listen —— 站点的延迟挂载组件（NY verso-listen-button 等）
   // 经常在我们第一次扫之后才挂到 DOM。
   if (typeof sweepListen === 'function') sweepListen();
-  window.addEventListener('afterprint', cleanup, { once: true });
-  window.print();
-  setTimeout(cleanup, 0);
+  if (typeof hideNYPreLeadWidgets === 'function') hideNYPreLeadWidgets();
+  // 打印分发：Economist 走 iframe 沙箱，其他站维持原路径。
+  // 全量迁移 iframe 在 CSIS/Carnegie/FA/NYer/WSJ/CNN 上引发了配图问题，
+  // 暂时回退到 Economist 单点启用，等 iframe 路径里图片 clone 逻辑加固后再推广。
+  if (isEconomist) {
+    try {
+      await printViaIframe(insertHost, mainEl, printTitle, cleanup);
+    } catch (e) {
+      console.error('[Save Webpage] iframe path failed, falling back:', e);
+      window.addEventListener('afterprint', cleanup, { once: true });
+      window.print();
+      setTimeout(cleanup, 0);
+    }
+  } else {
+    window.addEventListener('afterprint', cleanup, { once: true });
+    window.print();
+    setTimeout(cleanup, 0);
+  }
+
+  // ---- iframe 沙箱打印：把抽好的封面 + 正文 clone 到独立 iframe，注入
+  // IFRAME_CSS，调 iframe.contentWindow.print()。iframe 内没有站点 CSS / 字体 /
+  // 动画干扰，从根本上消除 ghost paint / 段内拆行 / 字体半加载等问题。
+  async function printViaIframe(insertHost, mainEl, printTitle, cleanup) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText =
+      'position:fixed;right:0;bottom:0;width:1px;height:1px;' +
+      'border:0;visibility:hidden;opacity:0;pointer-events:none;z-index:-1';
+    document.body.appendChild(iframe);
+    await new Promise(resolve => {
+      iframe.addEventListener('load', resolve, { once: true });
+      iframe.src = 'about:blank';
+    });
+
+    const idoc = iframe.contentDocument;
+    idoc.open();
+    idoc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title></title><style id="a4lp-iframe-css"></style></head><body></body></html>');
+    idoc.close();
+    idoc.title = printTitle;
+    idoc.getElementById('a4lp-iframe-css').textContent = IFRAME_CSS;
+
+    // Clone 封面（已含 hero/作者卡/SOURCE/TOC）
+    const coverClone = insertHost.cloneNode(true);
+    coverClone.querySelectorAll('.a4lp-hide').forEach(el => el.remove());
+    idoc.body.appendChild(coverClone);
+
+    // Clone 正文，剔除 .a4lp-hide，剥光非 a4lp-* 的 class/id/data-*/style，
+    // 让 iframe CSS 是唯一作用源（不再受 site CSS 高特异性选择器影响）
+    const mainClone = mainEl.cloneNode(true);
+    mainClone.querySelectorAll('.a4lp-hide').forEach(el => el.remove());
+    const KEEP_CLASS_RE = /^a4lp-(main|keep|comments|comments-start|comments-label|svg-icon|svg-graphic|source)$/;
+    const KEEP_ATTR = new Set(['src', 'href', 'alt', 'srcset', 'colspan', 'rowspan', 'lang', 'dir']);
+    const stripAttrs = (node) => {
+      if (node.nodeType !== 1) return;
+      if (node.classList && node.classList.length) {
+        const kept = Array.from(node.classList).filter(c => KEEP_CLASS_RE.test(c));
+        if (kept.length) node.className = kept.join(' ');
+        else node.removeAttribute('class');
+      }
+      Array.from(node.attributes || []).forEach(attr => {
+        if (attr.name === 'class' || KEEP_ATTR.has(attr.name)) return;
+        node.removeAttribute(attr.name);
+      });
+    };
+    stripAttrs(mainClone);
+    mainClone.querySelectorAll('*').forEach(stripAttrs);
+    idoc.body.appendChild(mainClone);
+
+    // 等图片就绪（image inline 阶段已转 blob URL，iframe 内可直接读）
+    await Promise.race([
+      Promise.all(Array.from(idoc.images).map(img =>
+        img.complete && img.naturalWidth > 0
+          ? Promise.resolve()
+          : new Promise(r => {
+              img.addEventListener('load', r, { once: true });
+              img.addEventListener('error', r, { once: true });
+            })
+      )),
+      new Promise(r => setTimeout(r, 5000))
+    ]);
+    if (idoc.fonts && idoc.fonts.ready) {
+      try { await Promise.race([idoc.fonts.ready, new Promise(r => setTimeout(r, 1500))]); } catch {}
+    }
+
+    let finalized = false;
+    const finalize = () => {
+      if (finalized) return;
+      finalized = true;
+      if (iframe.parentNode) iframe.remove();
+      cleanup();
+    };
+    iframe.contentWindow.addEventListener('afterprint', finalize, { once: true });
+    setTimeout(finalize, 600000); // 10 min 兜底
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }
 
   // ---- 内嵌 helper ----
   function pickContent(SITE_RULES) {

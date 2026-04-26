@@ -5,36 +5,24 @@
   <style>
     body { width: 260px; margin: 0; padding: 14px; font: 13px -apple-system, system-ui, sans-serif; }
     h1 { font-size: 13px; margin: 0 0 10px; font-weight: 600; }
-    .field { margin: 0 0 10px; }
-    .label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; }
-    select {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 7px 8px;
-      border: 1px solid #c7c7c7;
-      border-radius: 6px;
-      background: #fff;
-      font: inherit;
-    }
     button { width: 100%; padding: 8px 10px; border: 0; border-radius: 6px;
              color: #fff; font-size: 13px; cursor: pointer; }
     button:hover { filter: brightness(0.92); }
     button:disabled { background: #999 !important; cursor: default; }
     #pdf { background: #1a73e8; }
-    .hint { color: #666; font-size: 11px; margin-top: 8px; line-height: 1.4; }
+    .hint { color: #666; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+    kbd { display: inline-block; padding: 0 4px; min-width: 14px; text-align: center;
+          font: 11px -apple-system, system-ui, sans-serif;
+          background: #f4f4f4; border: 1px solid #d0d0d0; border-radius: 3px;
+          box-shadow: 0 1px 0 #d0d0d0; color: #333; }
+    code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px;
+           font: 10.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: #333; }
   </style>
 </head>
 <body>
   <h1>Save Webpage to PDF</h1>
-  <div class="field">
-    <label class="label" for="layoutMode">布局模式</label>
-    <select id="layoutMode">
-      <option value="reading">阅读版（推荐）</option>
-      <option value="archive">归档版</option>
-    </select>
-  </div>
   <button id="pdf">保存为竖向 A4 PDF</button>
-  <p class="hint">点击后直接打开打印对话框，选「另存为 PDF」并取消勾选「页眉和页脚」（Chrome 会记住）。</p>
+  <p class="hint">快捷键：<kbd>⇧</kbd> <kbd>⌥</kbd> <kbd>P</kbd>（macOS）/ <kbd>Shift</kbd>+<kbd>Alt</kbd>+<kbd>P</kbd>（Win/Linux）。改键去 <code>chrome://extensions/shortcuts</code>。</p>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -7,13 +7,21 @@
 @media print {
   body.a4lp-print-root {
     font-family: Georgia, "Times New Roman", "Noto Serif CJK SC", "Songti SC", serif !important;
-    font-size: 12pt !important;
-    line-height: 1.72 !important;
     color: #161616 !important;
     -webkit-font-smoothing: antialiased;
+    --a4lp-measure: 158mm;
+    --a4lp-cover-measure: 166mm;
+    --a4lp-font-body: 11.5pt;
+    --a4lp-line-body: 1.62;
+    --a4lp-font-caption: 9.75pt;
+    --a4lp-font-meta: 9.5pt;
+    --a4lp-font-h4: 11.75pt;
+    --a4lp-font-h3: 12.75pt;
+    --a4lp-font-h2: 14.5pt;
+    --a4lp-font-cover-title: 22pt;
+    font-size: var(--a4lp-font-body) !important;
+    line-height: var(--a4lp-line-body) !important;
   }
-  body.a4lp-mode-reading { --a4lp-measure: 154mm; --a4lp-cover-measure: 162mm; }
-  body.a4lp-mode-archive { --a4lp-measure: 160mm; --a4lp-cover-measure: 168mm; }
   /* 强制浅色，避免站点 dark-mode 把背景印成深灰浪费墨 */
   :root, html, body {
     color-scheme: light !important;
@@ -45,7 +53,7 @@
     overflow-wrap: anywhere !important;
     tab-size: 2;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
-    font-size: 10.5px !important;
+    font-size: 9.5pt !important;
     line-height: 1.45 !important;
   }
   pre {
@@ -61,15 +69,13 @@
     orphans: 3 !important;
     widows: 3 !important;
   }
-  /* Skia print 在段落跨页边界处偶发"半字重影"（同一行被先在 N 页底渲染一次
-     —— 下行字符与逗号被裁掉 —— 再在 N+1 页顶完整重渲染一次，造成
-     "ou marshal not merel ords" 紧挨 "you marshal not merely words"）。
-     给 <p> 加 break-inside: avoid 让段落整段跨页，绕开这个 bug。
-     `break-inside: avoid` 是 hint —— 段落超过单页时浏览器仍会拆。 */
+  /* 正文段落允许浏览器自然分页。强行整段避分页会在 Chrome/Skia 下
+     触发页底/页顶重复渲染，并显著拉长长文页数；只保留 widows/orphans。 */
   .a4lp-main p,
   .a4lp-comments p {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    overflow: visible !important;
   }
 
   /* 基础：只对"原子型"内容禁止内部切分。
@@ -175,6 +181,16 @@
   body.a4lp-print-root [aria-label*="Listen to" i],
   body.a4lp-print-root [aria-label="Play"],
   body.a4lp-print-root button[aria-label*="audio" i] {
+    display: none !important;
+  }
+  body.a4lp-print-root.a4lp-site-newyorker-com verso-listen-button,
+  body.a4lp-print-root.a4lp-site-newyorker-com [class*="Listen" i],
+  body.a4lp-print-root.a4lp-site-newyorker-com [class*="listen" i],
+  body.a4lp-print-root.a4lp-site-newyorker-com [data-testid*="listen" i],
+  body.a4lp-print-root.a4lp-site-newyorker-com [data-attribute-verso-pattern*="listen" i],
+  body.a4lp-print-root.a4lp-site-newyorker-com [aria-label*="Listen" i],
+  body.a4lp-print-root.a4lp-site-newyorker-com [aria-label*="audio" i],
+  body.a4lp-print-root.a4lp-site-newyorker-com button[aria-label*="Play" i] {
     display: none !important;
   }
   .a4lp-main,
@@ -291,6 +307,24 @@
     margin-left: auto !important;
     margin-right: auto !important;
   }
+  body.a4lp-print-root svg.a4lp-svg-icon {
+    display: inline-block !important;
+    width: 1.25em !important;
+    height: 1.25em !important;
+    max-width: 1.25em !important;
+    max-height: 1.25em !important;
+    vertical-align: -0.15em !important;
+    margin: 0 0.18em !important;
+  }
+  body.a4lp-print-root svg.a4lp-svg-graphic {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 255mm !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
   body.a4lp-print-root .a4lp-hide,
   body.a4lp-print-root .a4lp-hide * { display: none !important; }
   body.a4lp-print-root img,
@@ -303,8 +337,8 @@
     object-position: center center !important;
   }
   .a4lp-main {
-    font-size: 12pt !important;
-    line-height: 1.72 !important;
+    font-size: var(--a4lp-font-body) !important;
+    line-height: var(--a4lp-line-body) !important;
   }
   .a4lp-main > :first-child,
   .a4lp-comments > :first-child {
@@ -313,6 +347,31 @@
   .a4lp-main p,
   .a4lp-comments p {
     margin: 0 0 0.95em !important;
+  }
+  /* Economist 跨页撕裂的修复改走 flow.js 的 iframe 沙箱路径（IFRAME_CSS）。
+     这里不再需要任何 Economist 专属规则；如果 iframe 路径出错回退原路径，
+     默认的 break-inside: avoid + widows/orphans=3 会作为兜底。 */
+  /* Foreign Affairs：正文字号累计下调 36%（11.5pt → 7.36pt = 11.5 × 0.8 × 0.8）。
+     只覆盖该站点的 --a4lp-font-body 变量，line-height 保持相对值 1.62
+     自动按比例收紧，标题/caption/meta 不动以维持层级反差。 */
+  body.a4lp-print-root.a4lp-site-foreignaffairs-com {
+    --a4lp-font-body: 7.36pt !important;
+  }
+  /* New Yorker：正文字号目标 16px ≈ 12pt（11.5pt 默认 → 12pt 略放大一点点
+     与用户期望的 16px 一致；CSS 1pt = 4/3 px @ 96dpi，12pt = 16px）。
+     NY 的 <p> 落在内层 .body__inner-container 之类容器里，那层带自己的
+     font-size，所以仅在 .a4lp-main 覆盖变量不够，得直接打到段落级元素上。 */
+  body.a4lp-print-root.a4lp-site-newyorker-com {
+    --a4lp-font-body: 12pt !important;
+  }
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main,
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main p,
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main li,
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main blockquote,
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main blockquote p,
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main figcaption,
+  body.a4lp-print-root.a4lp-site-newyorker-com .a4lp-main div {
+    font-size: var(--a4lp-font-body) !important;
   }
   .a4lp-main ul,
   .a4lp-main ol,
@@ -343,17 +402,17 @@
   }
   .a4lp-main h2,
   .a4lp-comments h2 {
-    font-size: 17pt !important;
-    margin: 1.9em 0 0.45em !important;
+    font-size: var(--a4lp-font-h2) !important;
+    margin: 1.6em 0 0.42em !important;
   }
   .a4lp-main h3,
   .a4lp-comments h3 {
-    font-size: 14pt !important;
-    margin: 1.45em 0 0.35em !important;
+    font-size: var(--a4lp-font-h3) !important;
+    margin: 1.3em 0 0.32em !important;
   }
   .a4lp-main h4,
   .a4lp-comments h4 {
-    font-size: 12.5pt !important;
+    font-size: var(--a4lp-font-h4) !important;
     margin: 1.2em 0 0.25em !important;
   }
   .a4lp-main blockquote,
@@ -368,7 +427,7 @@
   .a4lp-comments figcaption,
   .a4lp-main .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas),
   .a4lp-comments .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas) {
-    font-size: 10.5pt !important;
+    font-size: var(--a4lp-font-caption) !important;
     line-height: 1.5 !important;
     color: #555 !important;
     margin-top: 0.4em !important;
@@ -377,7 +436,7 @@
   .a4lp-comments table {
     width: 100% !important;
     border-collapse: collapse !important;
-    font-size: 10pt !important;
+    font-size: var(--a4lp-font-caption) !important;
     margin: 1em 0 !important;
   }
   .a4lp-main th, .a4lp-main td,
@@ -403,48 +462,48 @@
 
   /* ---- 注入卡片：封面 / 作者卡 / 目录 ---- */
   .a4lp-source {
-    font: 11px/1.5 -apple-system, system-ui, sans-serif !important;
+    font: var(--a4lp-font-meta)/1.5 -apple-system, system-ui, sans-serif !important;
     color: #222 !important;
   }
 
   /* 封面页：标题/作者/SOURCE/目录 共占首页，结尾换页 */
   .a4lp-cover {
-    page-break-after: always;
-    break-after: page;
-    padding: 16mm 0 7mm;
+    page-break-after: always !important;
+    break-after: page !important;
+    padding: 14mm 0 7mm;
     display: block;
     max-width: var(--a4lp-cover-measure, 146mm) !important;
   }
   .a4lp-cover-kicker {
-    font-size: 10px;
+    font-size: var(--a4lp-font-meta);
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: #888;
-    margin-bottom: 20mm;
+    margin-bottom: 14mm;
   }
   .a4lp-cover-title {
-    font-size: 28px !important;
-    line-height: 1.25 !important;
+    font-size: var(--a4lp-font-cover-title) !important;
+    line-height: 1.22 !important;
     font-weight: 700 !important;
     color: #111 !important;
-    margin: 0 0 14mm !important;
+    margin: 0 0 9mm !important;
     border: 0 !important;
     padding: 0 !important;
   }
   .a4lp-cover-by {
-    font-size: 14px;
+    font-size: 10.5pt;
     color: #444;
-    margin-bottom: 10mm;
+    margin-bottom: 8mm;
     letter-spacing: 0.04em;
   }
   .a4lp-cover-source {
-    margin-top: 14mm;
-    padding-top: 6mm;
+    margin-top: 10mm;
+    padding-top: 5mm;
     border-top: 1px solid #ccc;
-    font-size: 10px;
+    font-size: var(--a4lp-font-meta);
     color: #666;
   }
-  /* 封面 hero 图 —— 居中 / 自动适配，归档版尺寸更大像杂志封面，阅读版收紧 */
+  /* 封面 hero 图：居中、完整显示，避免挤压标题和来源信息。 */
   .a4lp-cover-hero {
     margin: 8mm auto 10mm;
     text-align: center;
@@ -458,12 +517,6 @@
     height: auto !important;
     object-fit: contain !important;
   }
-  .a4lp-cover--reading .a4lp-cover-hero {
-    margin: 5mm auto 6mm;
-  }
-  .a4lp-cover--reading .a4lp-cover-hero img {
-    max-height: 50mm !important;
-  }
   .a4lp-cover-source span {
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -474,27 +527,7 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     color: #333;
     word-break: break-all;
-    font-size: 11px;
-  }
-  .a4lp-cover--reading {
-    page-break-after: auto;
-    break-after: auto;
-    padding: 0 0 8mm;
-  }
-  .a4lp-cover--reading .a4lp-cover-kicker {
-    margin-bottom: 5mm;
-  }
-  .a4lp-cover--reading .a4lp-cover-title {
-    font-size: 21px !important;
-    margin-bottom: 5mm !important;
-  }
-  .a4lp-cover--reading .a4lp-cover-by {
-    font-size: 12px;
-    margin-bottom: 4mm;
-  }
-  .a4lp-cover--reading .a4lp-cover-source {
-    margin-top: 0;
-    padding-top: 4mm;
+    font-size: var(--a4lp-font-meta);
   }
 
   .a4lp-authors {
@@ -507,7 +540,7 @@
     break-inside: avoid;
   }
   .a4lp-authors-h {
-    font-size: 11px;
+    font-size: var(--a4lp-font-meta);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -520,9 +553,9 @@
     break-inside: avoid;
   }
   .a4lp-author + .a4lp-author { border-top: 1px dotted #ccc; padding-top: 6px; }
-  .a4lp-author-name { font-weight: 700; font-size: 12px; color: #111; }
-  .a4lp-author-role { color: #666; font-style: italic; font-size: 11px; }
-  .a4lp-author-bio  { margin-top: 3px; color: #333; font-size: 11px; line-height: 1.5; }
+  .a4lp-author-name { font-weight: 700; font-size: 10pt; color: #111; }
+  .a4lp-author-role { color: #666; font-style: italic; font-size: var(--a4lp-font-meta); }
+  .a4lp-author-bio  { margin-top: 3px; color: #333; font-size: var(--a4lp-font-meta); line-height: 1.5; }
 
   .a4lp-toc {
     border-top: 1px solid #bbb;
@@ -533,7 +566,7 @@
     break-inside: avoid;
   }
   .a4lp-toc-h {
-    font-size: 12px;
+    font-size: 10pt;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -548,7 +581,7 @@
     padding-top: 6mm;
   }
   .a4lp-toc ul { list-style: none; margin: 0; padding: 0; }
-  .a4lp-toc li { font-size: 11px; line-height: 1.6; margin: 0; padding: 0; }
+  .a4lp-toc li { font-size: var(--a4lp-font-caption); line-height: 1.55; margin: 0; padding: 0; }
   .a4lp-toc-l1 { font-weight: 700; }
   .a4lp-toc-l2 { padding-left: 14px; }
   .a4lp-toc-l3 { padding-left: 28px; color: #555; }
