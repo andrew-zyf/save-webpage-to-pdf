@@ -49,19 +49,19 @@
 
 ```text
 save-webpage-to-pdf/
-├── manifest.json           MV3 清单
-├── popup.html              弹窗 UI
-├── popup.js                Popup 触发逻辑
-├── background.js           service worker：右键菜单 + 快捷键
-├── flow.js                 站点规则 + 抽取 + 标记 + 打印（共用入口）
-├── print.css               @page + 防跨页规则（原路径）
-├── icons/                  16 / 48 / 128 图标
-├── examples/               样张 PDF
+├── manifest.json                MV3 清单（权限 + 命令 + service worker）
+├── popup.html                   弹窗 UI（单按钮 + 快捷键提示）
+├── popup.js                     popup 触发：注入 print.css + flow.js
+├── background.js                service worker：右键菜单 + 快捷键 → flow.js
+├── flow.js                      抽取 + 标记 + 打印；含 SITE_RULES、IFRAME_CSS、printViaIframe
+├── print.css                    @page + 防跨页 + 站点 scope 覆盖（原打印路径）
+├── icons/                       icon16/48/128.png
+├── examples/                    7 个内置站的样张 PDF
 ├── docs/
-│   └── SITE_CUSTOMIZATION.md
+│   └── SITE_CUSTOMIZATION.md    工作原理 + 加站点 + 全站默认 + 已知限制
 ├── CHANGELOG.md
 ├── PRIVACY.md
-├── LICENSE                 MIT
+├── LICENSE
 └── README.md
 ```
 
