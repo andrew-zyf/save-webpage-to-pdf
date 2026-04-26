@@ -153,6 +153,16 @@ bind('pdf', async (tab) => {
 async function pdfFlow(SITE_RULES) {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const withTimeout = (p, ms) => Promise.race([p, sleep(ms)]);
+  const cleanupActions = [];
+  const rememberAttr = (el, name) => {
+    const hadAttr = el.hasAttribute(name);
+    const value = el.getAttribute(name);
+    cleanupActions.push(() => {
+      if (!el.isConnected) return;
+      if (hadAttr) el.setAttribute(name, value);
+      else el.removeAttribute(name);
+    });
+  };
 
   // 0. 触发懒加载（图片+评论模块），总预算 6s
   const origScroll = window.scrollY;
@@ -170,47 +180,108 @@ async function pdfFlow(SITE_RULES) {
   }
   window.scrollTo(0, origScroll);
 
-  document.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
+  document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+    rememberAttr(img, 'loading');
+    img.loading = 'eager';
+  });
 
   // 0a. 自动展开 <details> 与"点击展开"按钮（仅触发 aria-expanded=false 的 button）
-  document.querySelectorAll('details:not([open])').forEach(d => { d.open = true; });
+  const openedDetails = [];
+  document.querySelectorAll('details:not([open])').forEach(d => {
+    openedDetails.push(d);
+    d.open = true;
+  });
+  if (openedDetails.length) {
+    cleanupActions.push(() => {
+      openedDetails.forEach(d => {
+        if (d.isConnected) d.open = false;
+      });
+    });
+  }
+  const clickedExpandButtons = [];
   document.querySelectorAll('button[aria-expanded="false"]').forEach(b => {
     const txt = (b.innerText || '').trim().toLowerCase();
     if (/show more|read more|expand|展开|更多|查看更多|continue reading/.test(txt)) {
+      clickedExpandButtons.push(b);
       try { b.click(); } catch {}
     }
   });
-
-  // 0b. 把 <picture>/srcset 中最高分辨率写回 <img src>，避免打印缩放后模糊
-  const pickBestFromSrcset = (srcset) => {
-    if (!srcset) return '';
-    let best = '', bestW = 0;
-    srcset.split(',').forEach(part => {
-      const m = part.trim().match(/^(\S+)(?:\s+(\d+)w)?/);
-      if (!m) return;
-      const w = m[2] ? parseInt(m[2], 10) : 0;
-      if (w >= bestW) { bestW = w; best = m[1]; }
+  if (clickedExpandButtons.length) {
+    cleanupActions.push(() => {
+      clickedExpandButtons.forEach(b => {
+        if (!b.isConnected) return;
+        if ((b.getAttribute('aria-expanded') || '').toLowerCase() !== 'true') return;
+        try { b.click(); } catch {}
+      });
     });
-    return best;
+  }
+
+  // 0b. 仅对当前匹配的 srcset/source 选最高分辨率候选，避免拿错断点图。
+  const SUPPORTED_PICTURE_TYPES = new Set([
+    'image/avif', 'image/webp', 'image/png', 'image/jpeg', 'image/gif', 'image/svg+xml'
+  ]);
+  const parseSrcset = (srcset) => {
+    if (!srcset || /^\s*data:/i.test(srcset)) return [];
+    return srcset.split(',').map(part => {
+      const trimmed = part.trim();
+      if (!trimmed) return null;
+      const pieces = trimmed.split(/\s+/);
+      const descriptor = pieces[1] || '';
+      const width = descriptor.endsWith('w') ? parseInt(descriptor, 10) : 0;
+      const density = descriptor.endsWith('x') ? parseFloat(descriptor) : 1;
+      return {
+        url: pieces[0],
+        width: Number.isFinite(width) ? width : 0,
+        density: Number.isFinite(density) ? density : 1
+      };
+    }).filter(Boolean);
+  };
+  const pickBestFromSrcset = (srcset) => {
+    const candidates = parseSrcset(srcset);
+    if (!candidates.length) return '';
+    const hasWidth = candidates.some(c => c.width > 0);
+    candidates.sort((a, b) => {
+      if (hasWidth) return (b.width - a.width) || (b.density - a.density);
+      return b.density - a.density;
+    });
+    return candidates[0].url;
+  };
+  const matchesPictureSource = (source) => {
+    const media = (source.getAttribute('media') || '').trim();
+    if (media) {
+      try {
+        if (!window.matchMedia(media).matches) return false;
+      } catch {
+        return false;
+      }
+    }
+    const type = (source.getAttribute('type') || '').trim().toLowerCase();
+    return !type || SUPPORTED_PICTURE_TYPES.has(type);
   };
   document.querySelectorAll('img').forEach(img => {
-    let best = '', bestW = 0;
     const pic = img.closest('picture');
-    if (pic) {
-      pic.querySelectorAll('source[srcset]').forEach(s => {
-        const cand = pickBestFromSrcset(s.getAttribute('srcset'));
-        const w = parseInt((s.getAttribute('srcset') || '').match(/(\d+)w/)?.[1] || '0', 10);
-        if (cand && w >= bestW) { bestW = w; best = cand; }
-      });
+    const activeSource = pic ? Array.from(pic.querySelectorAll('source[srcset]')).find(matchesPictureSource) : null;
+    const srcsetOwner = activeSource || (img.hasAttribute('srcset') ? img : null);
+    if (!srcsetOwner) return;
+    const best = pickBestFromSrcset(srcsetOwner.getAttribute('srcset'));
+    if (!best) return;
+    let bestUrl = '';
+    try {
+      bestUrl = new URL(best, document.baseURI).href;
+    } catch {
+      return;
     }
-    const own = pickBestFromSrcset(img.getAttribute('srcset'));
-    if (own) {
-      const w = parseInt((img.getAttribute('srcset') || '').match(/(\d+)w/)?.[1] || '0', 10);
-      if (w >= bestW) { bestW = w; best = own; }
+    if (activeSource) {
+      if (img.currentSrc === bestUrl) return;
+      rememberAttr(activeSource, 'srcset');
+      activeSource.setAttribute('srcset', bestUrl);
+      return;
     }
-    if (best && best !== img.src) {
-      try { img.src = new URL(best, location.href).href; } catch {}
-    }
+    if (img.currentSrc === bestUrl || img.src === bestUrl) return;
+    rememberAttr(img, 'src');
+    if (img.hasAttribute('srcset')) rememberAttr(img, 'srcset');
+    img.src = bestUrl;
+    if (img.hasAttribute('srcset')) img.setAttribute('srcset', bestUrl);
   });
 
   await withTimeout(
@@ -317,34 +388,51 @@ async function pdfFlow(SITE_RULES) {
   });
   } // /actionButton
 
-  // 5c. 文末截断（通用，无须站点规则）
-  // 思路：找到 mainEl 内「最后一段实质段落 / figure / blockquote」作为「正文结束点」，
-  // 然后把全文 DOM 顺序里位于它之后的一切都 hide（除评论容器、safeKeep、我们注入的封面）。
-  // 这样无论 WSJ 把推荐列表混在 mainEl 内部尾部、还是放成 mainEl 兄弟、
-  // 或更外层的 wrapper 都能一次清理；并且不依赖随时变动的 class 名。
+  // 5c. 文末卡片条清理：仅清理 mainEl 内、正文尾部之后的明显 recirc 模块，
+  // 不再按“最后一个长段落之后全部隐藏”的方式截断，避免误删合法短结尾。
   if (mainEl && !off('trailingCardStrip')) {
-    const candidates = [];
-    mainEl.querySelectorAll('p, blockquote, figure, li, h2, h3, h4').forEach(el => {
+    const substantive = [];
+    mainEl.querySelectorAll('p, blockquote, figure, li, h2, h3, h4, pre, table').forEach(el => {
       const t = (el.innerText || '').trim();
-      if (t.length >= 60) candidates.push(el);
+      if (el.tagName === 'FIGURE' || el.tagName === 'TABLE' || t.length >= 60) substantive.push(el);
     });
-    const lastReal = candidates[candidates.length - 1] || mainEl;
+    const lastReal = substantive[substantive.length - 1] || null;
+    const RECIRC_RE = /(related|recommended|recommendation|read next|what to read|more from|more to read|latest|trending|most popular|popular|newsletter|you may also like|continue reading|相关阅读|延伸阅读|更多阅读|推荐阅读|相关文章|最新|热门|猜你喜欢)/i;
+    const looksLikeRecirculation = (el) => {
+      const marker = [
+        el.id,
+        el.className && typeof el.className === 'string' ? el.className : '',
+        el.getAttribute && el.getAttribute('aria-label') || '',
+        el.getAttribute && el.getAttribute('data-testid') || ''
+      ].join(' ');
+      if (RECIRC_RE.test(marker)) return true;
+      const text = (el.innerText || '').replace(/\s+/g, ' ').trim();
+      if (!text) return false;
+      const links = el.querySelectorAll('a').length;
+      const items = el.querySelectorAll('li, article, section, .card, [class*="card" i]').length;
+      const longParas = Array.from(el.querySelectorAll('p')).filter(p => ((p.innerText || '').trim().length >= 120)).length;
+      const linkText = Array.from(el.querySelectorAll('a')).reduce((sum, a) => sum + ((a.innerText || '').trim().length), 0);
+      const linkRatio = text.length ? (linkText / text.length) : 0;
+      if (RECIRC_RE.test(text.slice(0, 240))) return true;
+      if (links >= 4 && linkRatio > 0.45 && longParas <= 1) return true;
+      if (items >= 3 && longParas === 0 && text.length < 2500) return true;
+      return false;
+    };
     if (lastReal) {
-      // DOM 顺序往后遍历（包含子树），把后续节点全部 hide
-      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
-      let started = false;
-      let node;
-      while ((node = walker.nextNode())) {
-        if (!started) {
-          if (node === lastReal) started = true;
-          continue;
+      let cur = lastReal;
+      while (cur && cur !== mainEl) {
+        let sib = cur.nextElementSibling;
+        while (sib) {
+          const next = sib.nextElementSibling;
+          if (!sib.closest('.a4lp-hide') &&
+              !isSafe(sib) &&
+              !commentEls.some(c => c === sib || c.contains(sib) || sib.contains(c)) &&
+              looksLikeRecirculation(sib)) {
+            sib.classList.add('a4lp-hide');
+          }
+          sib = next;
         }
-        if (lastReal.contains(node)) continue;        // lastReal 内部跳过
-        if (node.closest('.a4lp-source')) continue;    // 注入的封面/目录
-        if (node.closest('.a4lp-hide')) continue;      // 已被前面步骤标记
-        if (isSafe(node)) continue;
-        if (commentEls.some(c => c === node || c.contains(node) || node.contains(c))) continue;
-        node.classList.add('a4lp-hide');
+        cur = cur.parentElement;
       }
     }
   }
@@ -482,11 +570,11 @@ async function pdfFlow(SITE_RULES) {
   });
   } // /figureGroup
 
-  await sleep(300);
-  window.print();
-
-  // 9. 清理标记
-  setTimeout(() => {
+  // 9. 清理标记与临时 DOM 变更
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
     document.querySelectorAll('.a4lp-hide').forEach(el => el.classList.remove('a4lp-hide'));
     document.querySelectorAll('.a4lp-safe').forEach(el => el.classList.remove('a4lp-safe'));
     document.querySelectorAll('.a4lp-keep').forEach(wrap => {
@@ -495,7 +583,15 @@ async function pdfFlow(SITE_RULES) {
       parent.removeChild(wrap);
     });
     document.querySelectorAll('.a4lp-source').forEach(el => el.remove());
-  }, 500);
+    for (let i = cleanupActions.length - 1; i >= 0; i--) {
+      try { cleanupActions[i](); } catch {}
+    }
+  };
+
+  await sleep(300);
+  window.addEventListener('afterprint', cleanup, { once: true });
+  window.print();
+  setTimeout(cleanup, 0);
 
   // ---- 内嵌 helper：与 mdFlow 共用 ----
   function pickContent(SITE_RULES) {
@@ -683,4 +779,3 @@ async function pdfFlow(SITE_RULES) {
     };
   }
 }
-
