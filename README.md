@@ -32,19 +32,19 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 
 ## Examples
 
-- 样张目录：`examples/`
-- 详细对比：`examples/README.md`
+- 样张目录：[`examples/`](examples/)
+- 详细对比：[`examples/README.md`](examples/README.md)
 - 组织方式：每篇文章一个子目录，统一保留 `reading.pdf` 与 `archive.pdf`
 
 | Site | Reading | Archive |
 | --- | --- | --- |
-| `Carnegie` | `examples/carnegie-ai-labor-debate/reading.pdf` | `examples/carnegie-ai-labor-debate/archive.pdf` |
-| `CNN` | `examples/cnn-mali-insurgents/reading.pdf` | `examples/cnn-mali-insurgents/archive.pdf` |
-| `CSIS` | `examples/csis-wartime-oil-prices/reading.pdf` | `examples/csis-wartime-oil-prices/archive.pdf` |
-| `Economist` | `examples/economist-rhetoric-of-war/reading.pdf` | `examples/economist-rhetoric-of-war/archive.pdf` |
-| `Foreign Affairs` | `examples/foreignaffairs-china-russia-iran/reading.pdf` | `examples/foreignaffairs-china-russia-iran/archive.pdf` |
-| `New Yorker` | `examples/newyorker-jd-vance/reading.pdf` | `examples/newyorker-jd-vance/archive.pdf` |
-| `WSJ` | `examples/wsj-united-card-counting/reading.pdf` | `examples/wsj-united-card-counting/archive.pdf` |
+| `Carnegie` | [reading](examples/carnegie-ai-labor-debate/reading.pdf) | [archive](examples/carnegie-ai-labor-debate/archive.pdf) |
+| `CNN` | [reading](examples/cnn-mali-insurgents/reading.pdf) | [archive](examples/cnn-mali-insurgents/archive.pdf) |
+| `CSIS` | [reading](examples/csis-wartime-oil-prices/reading.pdf) | [archive](examples/csis-wartime-oil-prices/archive.pdf) |
+| `Economist` | [reading](examples/economist-rhetoric-of-war/reading.pdf) | [archive](examples/economist-rhetoric-of-war/archive.pdf) |
+| `Foreign Affairs` | [reading](examples/foreignaffairs-china-russia-iran/reading.pdf) | [archive](examples/foreignaffairs-china-russia-iran/archive.pdf) |
+| `New Yorker` | [reading](examples/newyorker-jd-vance/reading.pdf) | [archive](examples/newyorker-jd-vance/archive.pdf) |
+| `WSJ` | [reading](examples/wsj-united-card-counting/reading.pdf) | [archive](examples/wsj-united-card-counting/archive.pdf) |
 
 ## 实现说明
 
