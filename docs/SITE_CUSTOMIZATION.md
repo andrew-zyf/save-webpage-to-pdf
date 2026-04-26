@@ -1,6 +1,25 @@
 # 按站点定制
 
-**核心原则**：所有新规则都站点定向，不动通用层。同一条 hack 在 A 站救命、在 B 站可能砸场。把作用域钉死，回归才不会跨站串味。
+## 工作原理
+
+**抽取 → 标记 → 打印**。
+
+**抽取**（`flow.js`）走 `SITE_RULES`：每个站给一组 CSS 选择器（`main` / `title` / `author` / `authorBio` / `extraRemove`）。命中规则的元素直接采用；通用 fallback 按 `<p>` 文本评分（扣减链接文本 / 链接数惩罚）挑出正文容器，避开侧栏和推荐流。作者抽取链路：站点规则 → `meta[name=author]` → schema.org `[itemprop=author]` → byline 启发式。
+
+**标记**：先滚整页 6 秒触发懒加载、展开 `<details>` 与 "Show more"、`fetch` blob inline 图片绕过 CORS 偶发问题。然后给非正文兄弟节点打 `.a4lp-hide`、给「裸 `<img>` + 紧邻 caption」包成 `.a4lp-keep` 不跨页、给小漂浮 / 广告 / 收听-分享-订阅按钮也打 `.a4lp-hide`。把封面（标题 + 作者卡 + SOURCE URL + 自动目录）作为 `.a4lp-source` 容器插到 body 最前。
+
+**打印**两条路径：
+
+- **iframe 沙箱**（仅 Economist）：clone 封面 + 正文到独立 iframe，注入自包含 `IFRAME_CSS`，调 `iframe.contentWindow.print()`。iframe 完全脱离站点 CSS / 字体 / 动画 / aria-hidden 干扰，从根上消除 Economist 的跨页文字撕裂和 ghost paint。其他站在 iframe 下出现配图问题，全量推广待图片 clone 逻辑加固
+- **原路径**（其他 6 站）：直接 `window.print()`，靠 `print.css` 的 `@page` + 字号 + 防跨页规则约束 layout
+
+`afterprint` 清理：移除所有 `.a4lp-hide` / `.a4lp-keep` / `.a4lp-source`，恢复临时改过的 `details` / `loading` / `src` / `srcset`、`document.title`（用作 PDF 默认文件名 `媒体简称 - 标题`）。
+
+排版：列宽 158mm、封面列宽 166mm、图本体高度上限 255mm，> 260 万像素图重编码 JPEG。Georgia / Songti / Noto Serif CJK 衬线 fallback，强制浅色覆盖站点 dark mode。`@page { size: A4 portrait; margin: 11mm 12mm 11mm 13mm }`，首页 `18mm 14mm`。目录用 CSS `target-counter()`，长目录自动独立分页。
+
+## 核心原则
+
+所有新规则都站点定向，不动通用层。同一条 hack 在 A 站救命、在 B 站可能砸场。把作用域钉死，回归才不会跨站串味。
 
 ## 改动落点速查
 
