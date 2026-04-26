@@ -5,7 +5,7 @@
 [![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-preview-1a73e8?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe/preview?hl=zh-CN&authuser=0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Privacy](https://img.shields.io/badge/Privacy-no_data_collected-success)](PRIVACY.md)
-[![Changelog](https://img.shields.io/badge/Changelog-v1.0.0-blue)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/Changelog-v1.0.1-blue)](CHANGELOG.md)
 
 内置规则覆盖 **Carnegie · CNN · CSIS · The Economist · Foreign Affairs · The New Yorker · WSJ**；其他站点走通用 fallback 路径，多数文章页也能识别。
 

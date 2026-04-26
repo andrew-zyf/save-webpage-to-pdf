@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Save Webpage to PDF",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "一键将当前网页保存为竖向 A4 PDF：自动抽取标题/作者/正文，图片不跨页、说明与图同页。",
   "permissions": ["activeTab", "scripting", "contextMenus"],
   "action": {
