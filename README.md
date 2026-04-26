@@ -43,13 +43,7 @@
 
 ## 工作原理
 
-**抽取 → 标记 → 打印**。`flow.js` 按 `SITE_RULES` 抽出标题 / 作者 / 正文，标记非正文节点为 `.a4lp-hide`、把图与 caption 包成 `.a4lp-keep` 不跨页，注入封面 / 目录 / 作者卡，再调 `window.print()`（Economist 走 iframe 沙箱避开 Skia 跨页 ghost paint）。详细机制与每个站的专属规则见 [docs/SITE_CUSTOMIZATION.md](docs/SITE_CUSTOMIZATION.md)。
-
-## 文档
-
-- [按站点定制](docs/SITE_CUSTOMIZATION.md) —— 工作原理、新增站点步骤、现存站点规则索引、全站默认行为清单
-- [CHANGELOG](CHANGELOG.md) —— 版本记录
-- [PRIVACY](PRIVACY.md) —— 隐私政策（无数据收集）
+**抽取 → 标记 → 打印**。`flow.js` 按 `SITE_RULES` 抽出标题 / 作者 / 正文，标记非正文节点为 `.a4lp-hide`、把图与 caption 包成 `.a4lp-keep` 不跨页，注入封面 / 目录 / 作者卡，再调 `window.print()`（Economist 走 iframe 沙箱避开 Skia 跨页 ghost paint）。详细机制、新增站点步骤、现存站点规则索引见 [docs/SITE_CUSTOMIZATION.md](docs/SITE_CUSTOMIZATION.md)；版本记录见 [CHANGELOG](CHANGELOG.md)；隐私政策见 [PRIVACY](PRIVACY.md)。
 
 ## 已知限制
 
