@@ -4,7 +4,13 @@ Chrome 扩展（MV3）。一键把当前文章页保存为竖向 A4 PDF：自动
 
 内置规则覆盖 Carnegie · CNN · CSIS · The Economist · Foreign Affairs · The New Yorker · WSJ。其他站点走通用 fallback 路径，多数文章页也能识别。
 
+> **Chrome Web Store 预览**：[chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe](https://chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe/preview?hl=zh-CN&authuser=0)
+
 ## 安装
+
+**方式一（推荐，发布后）**：在上面的 Chrome Web Store 链接里点「添加到 Chrome」。
+
+**方式二（开发者模式 / 自行加载）**：
 
 1. 打开 `chrome://extensions`，右上角开「开发者模式」
 2. 「加载已解压的扩展程序」→ 选本目录
