@@ -5,6 +5,15 @@
 @page :first { margin: 25mm 22mm; }
 
 @media print {
+  body.a4lp-print-root {
+    font-family: Georgia, "Times New Roman", "Noto Serif CJK SC", "Songti SC", serif !important;
+    font-size: 12pt !important;
+    line-height: 1.72 !important;
+    color: #161616 !important;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.a4lp-mode-reading { --a4lp-measure: 132mm; --a4lp-cover-measure: 138mm; }
+  body.a4lp-mode-archive { --a4lp-measure: 138mm; --a4lp-cover-measure: 146mm; }
   /* 强制浅色，避免站点 dark-mode 把背景印成深灰浪费墨 */
   :root, html, body {
     color-scheme: light !important;
@@ -23,6 +32,7 @@
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
     tab-size: 2;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
     font-size: 10.5px !important;
     line-height: 1.45 !important;
   }
@@ -86,6 +96,109 @@
 
   /* 由 popup.js 标记的元素一律不打印（漂浮广告、sticky 工具栏、cookie 横幅等） */
   .a4lp-hide { display: none !important; }
+  .a4lp-main,
+  .a4lp-comments,
+  .a4lp-cover,
+  .a4lp-toc-page {
+    width: auto !important;
+    max-width: var(--a4lp-measure, 136mm) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  .a4lp-main {
+    font-size: 12pt !important;
+    line-height: 1.72 !important;
+  }
+  .a4lp-main p,
+  .a4lp-comments p {
+    margin: 0 0 0.95em !important;
+  }
+  .a4lp-main ul,
+  .a4lp-main ol,
+  .a4lp-comments ul,
+  .a4lp-comments ol {
+    padding-left: 1.4em !important;
+    margin: 0.3em 0 1em !important;
+  }
+  .a4lp-main li,
+  .a4lp-comments li {
+    margin: 0.18em 0 !important;
+  }
+  .a4lp-main h1,
+  .a4lp-main h2,
+  .a4lp-main h3,
+  .a4lp-main h4,
+  .a4lp-main h5,
+  .a4lp-main h6,
+  .a4lp-comments h1,
+  .a4lp-comments h2,
+  .a4lp-comments h3,
+  .a4lp-comments h4,
+  .a4lp-comments h5,
+  .a4lp-comments h6 {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Noto Sans CJK SC", sans-serif !important;
+    line-height: 1.3 !important;
+    color: #101010 !important;
+  }
+  .a4lp-main h2,
+  .a4lp-comments h2 {
+    font-size: 17pt !important;
+    margin: 1.9em 0 0.45em !important;
+  }
+  .a4lp-main h3,
+  .a4lp-comments h3 {
+    font-size: 14pt !important;
+    margin: 1.45em 0 0.35em !important;
+  }
+  .a4lp-main h4,
+  .a4lp-comments h4 {
+    font-size: 12.5pt !important;
+    margin: 1.2em 0 0.25em !important;
+  }
+  .a4lp-main blockquote,
+  .a4lp-comments blockquote {
+    margin: 1.1em 0 1.1em 0 !important;
+    padding: 0.15em 0 0.15em 1em !important;
+    border-left: 3px solid #cfcfcf !important;
+    color: #333 !important;
+    font-style: italic;
+  }
+  .a4lp-main figcaption,
+  .a4lp-comments figcaption,
+  .a4lp-main .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas),
+  .a4lp-comments .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas) {
+    font-size: 10.5pt !important;
+    line-height: 1.5 !important;
+    color: #555 !important;
+    margin-top: 0.4em !important;
+  }
+  .a4lp-main table,
+  .a4lp-comments table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 10pt !important;
+    margin: 1em 0 !important;
+  }
+  .a4lp-main th, .a4lp-main td,
+  .a4lp-comments th, .a4lp-comments td {
+    border: 1px solid #ddd !important;
+    padding: 6px 8px !important;
+    vertical-align: top !important;
+  }
+  .a4lp-comments-start {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+  .a4lp-comments-label {
+    max-width: var(--a4lp-measure, 136mm) !important;
+    margin: 0 auto 8mm !important;
+    padding-top: 6mm !important;
+    border-top: 1px solid #bbb !important;
+    font: 700 12px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #444 !important;
+  }
 
   /* ---- 注入卡片：封面 / 作者卡 / 目录 ---- */
   .a4lp-source {
@@ -99,6 +212,7 @@
     break-after: page;
     padding: 25mm 0 10mm;
     display: block;
+    max-width: var(--a4lp-cover-measure, 146mm) !important;
   }
   .a4lp-cover-kicker {
     font-size: 10px;
@@ -140,6 +254,26 @@
     color: #333;
     word-break: break-all;
     font-size: 11px;
+  }
+  .a4lp-cover--reading {
+    page-break-after: auto;
+    break-after: auto;
+    padding: 0 0 8mm;
+  }
+  .a4lp-cover--reading .a4lp-cover-kicker {
+    margin-bottom: 5mm;
+  }
+  .a4lp-cover--reading .a4lp-cover-title {
+    font-size: 21px !important;
+    margin-bottom: 5mm !important;
+  }
+  .a4lp-cover--reading .a4lp-cover-by {
+    font-size: 12px;
+    margin-bottom: 4mm;
+  }
+  .a4lp-cover--reading .a4lp-cover-source {
+    margin-top: 0;
+    padding-top: 4mm;
   }
 
   .a4lp-authors {
@@ -184,6 +318,13 @@
     text-transform: uppercase;
     color: #444;
     margin: 0 0 6px;
+  }
+  .a4lp-toc-page {
+    break-before: page;
+    page-break-before: always;
+    break-after: page;
+    page-break-after: always;
+    padding-top: 6mm;
   }
   .a4lp-toc ul { list-style: none; margin: 0; padding: 0; }
   .a4lp-toc li { font-size: 11px; line-height: 1.6; margin: 0; padding: 0; }

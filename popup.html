@@ -3,8 +3,19 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body { width: 240px; margin: 0; padding: 14px; font: 13px -apple-system, system-ui, sans-serif; }
+    body { width: 260px; margin: 0; padding: 14px; font: 13px -apple-system, system-ui, sans-serif; }
     h1 { font-size: 13px; margin: 0 0 10px; font-weight: 600; }
+    .field { margin: 0 0 10px; }
+    .label { display: block; font-size: 11px; color: #555; margin-bottom: 4px; }
+    select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 7px 8px;
+      border: 1px solid #c7c7c7;
+      border-radius: 6px;
+      background: #fff;
+      font: inherit;
+    }
     button { width: 100%; padding: 8px 10px; border: 0; border-radius: 6px;
              color: #fff; font-size: 13px; cursor: pointer; }
     button:hover { filter: brightness(0.92); }
@@ -15,6 +26,13 @@
 </head>
 <body>
   <h1>Save Webpage to PDF</h1>
+  <div class="field">
+    <label class="label" for="layoutMode">布局模式</label>
+    <select id="layoutMode">
+      <option value="reading">阅读版（推荐）</option>
+      <option value="archive">归档版</option>
+    </select>
+  </div>
   <button id="pdf">保存为竖向 A4 PDF</button>
   <p class="hint">点击后直接打开打印对话框，选「另存为 PDF」并取消勾选「页眉和页脚」（Chrome 会记住）。</p>
   <script src="popup.js"></script>

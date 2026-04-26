@@ -1,5 +1,12 @@
 // ---- 站点规则白名单（按 host 字母序） ----
 const SITE_RULES = {
+  'carnegieendowment.org': {
+    main: 'article, main article, [class*="article-body" i], [class*="post__content" i], main',
+    title: 'h1',
+    author: '[class*="Byline" i], [class*="author" i], [rel="author"], [itemprop="author"] [itemprop="name"], [itemprop="author"]',
+    authorBio: '[class*="author-bio" i], [class*="AuthorBio" i], [class*="contributor-bio" i]',
+    extraRemove: '[class*="social" i], [class*="share" i], [class*="newsletter" i], [class*="related" i], [class*="recirc" i], aside, footer, [role="contentinfo"]'
+  },
   'cnn.com': {
     main: '.article__content-container, .article__content, [data-component-name="ArticleBody"], article.article .l-container, article.article, main article',
     title: 'h1.headline__text, h1[data-editable="headlineText"], h1',
@@ -26,7 +33,7 @@ const SITE_RULES = {
   'foreignaffairs.com': {
     main: 'article.article, [class*="article__body"], .article-body, .article-content, article, main',
     title: 'h1.topper__title, h1',
-    author: '.topper__byline a, .article-byline a, [class*="byline"] a, [class*="byline"]',
+    author: '.topper__byline, .article-byline, [class*="byline"]',
     authorBio: '[class*="author-bio"], [class*="contributor-bio"], [class*="AuthorBio"], .article__author-info',
     extraRemove: '.article-tools, .article__related, .article__most_read, .article-tags, .promo-callout, .article-actions, .related-articles, .recirculation, .related-content, .promo-block, [class*="newsletter"], [class*="paywall-promo"], [class*="audio-player"], [class*="article-callout"], [data-armstrong-id="wrapper"]'
   },
@@ -35,7 +42,7 @@ const SITE_RULES = {
     // .body__inner-container 段）；末尾的 recirc/newsletter/footer 模块由 extraRemove 兜底。
     main: 'article, main article, [data-attribute-verso-pattern="article-body"], [class*="ArticleBodyWrapper"], [class*="BodyWrapper"], main',
     title: 'h1',
-    author: '[class*="BylineWrapper"] a, [class*="byline"] a, [class*="Byline"]',
+    author: '[class*="BylineWrapper"], [data-testid*="Byline" i], [class*="Byline"], [class*="byline"]',
     authorBio: '[class*="ContributorBio"], [class*="ContributorBlock"], [class*="contributor-bio"]',
     extraRemove: [
       '[class*="ConsumerMarketingUnit"]',
@@ -55,9 +62,10 @@ const SITE_RULES = {
   'wsj.com': {
     main: 'section[subscriptions-section="content"], [data-module-id*="ArticleBody"], article[itemtype*="NewsArticle"] section.article-content, [class*="ArticleBody-module"] section, article section.article-content',
     title: 'h1[itemprop="headline"], h1',
-    author: '[itemprop="name"], [class*="byline"] a, [class*="Byline"] a, [class*="byline"]',
+    author: '[itemprop="author"], [class*="Byline"], [class*="byline"]',
     authorBio: '[class*="author-bio"], [class*="AuthorBio"], [data-module-id*="author-bio"], [class*="bylineBio"]',
     comments: '[id*="spotim"], [class*="spotim"], [data-spotim-module], [id^="conversation"], [id^="sp_message"]',
+    disable: ['toc'],
     extraRemove: [
       // 听文 / 朗读 工具条
       '[aria-label*="Listen to article" i]',
@@ -111,7 +119,37 @@ function showError(msg) {
   el.textContent = msg;
 }
 
+const SETTINGS_KEY = 'save-webpage-to-pdf.options.v1';
 const RESTRICTED = /^(chrome|edge|about|chrome-extension|view-source|devtools):|^https:\/\/chrome\.google\.com\/webstore|^https:\/\/chromewebstore\.google\.com/;
+
+function loadOptions() {
+  try {
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function getOptions() {
+  return {
+    layoutMode: $('layoutMode')?.value === 'archive' ? 'archive' : 'reading',
+  };
+}
+
+function saveOptions() {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(getOptions()));
+  } catch {}
+}
+
+function initOptions() {
+  const saved = loadOptions();
+  if ($('layoutMode')) $('layoutMode').value = saved.layoutMode === 'archive' ? 'archive' : 'reading';
+  ['layoutMode'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('change', saveOptions);
+  });
+}
 
 function bind(id, handler) {
   $(id).addEventListener('click', async () => {
@@ -125,7 +163,9 @@ function bind(id, handler) {
       if (!tab.url || RESTRICTED.test(tab.url)) {
         throw new Error('当前页面受 Chrome 限制（chrome://、Web Store、PDF 等），扩展无法注入脚本。请在普通网页上使用。');
       }
-      await handler(tab);
+      const options = getOptions();
+      saveOptions();
+      await handler(tab, options);
       btn.textContent = '完成 ✓';
       setTimeout(() => window.close(), 600);
     } catch (e) {
@@ -137,7 +177,9 @@ function bind(id, handler) {
   });
 }
 
-bind('pdf', async (tab) => {
+initOptions();
+
+bind('pdf', async (tab, options) => {
   await chrome.scripting.insertCSS({
     target: { tabId: tab.id },
     files: ['print.css'],
@@ -145,15 +187,31 @@ bind('pdf', async (tab) => {
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: pdfFlow,
-    args: [SITE_RULES],
+    args: [SITE_RULES, options],
   });
 });
 
 // ---- PDF flow ----
-async function pdfFlow(SITE_RULES) {
+async function pdfFlow(SITE_RULES, options = {}) {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const withTimeout = (p, ms) => Promise.race([p, sleep(ms)]);
   const cleanupActions = [];
+  const layoutMode = options.layoutMode === 'archive' ? 'archive' : 'reading';
+  // 处理上一次打印异常留下的注入节点，避免封面/目录重复叠加。
+  document.querySelectorAll('.a4lp-source').forEach(el => el.remove());
+  document.querySelectorAll('.a4lp-hide').forEach(el => el.classList.remove('a4lp-hide'));
+  document.querySelectorAll('.a4lp-safe').forEach(el => el.classList.remove('a4lp-safe'));
+  document.documentElement.classList.remove('a4lp-print-root');
+  document.body.classList.remove('a4lp-print-root', 'a4lp-mode-reading', 'a4lp-mode-archive');
+  document.querySelectorAll('.a4lp-main, .a4lp-comments, .a4lp-comments-start').forEach(el => {
+    el.classList.remove('a4lp-main', 'a4lp-comments', 'a4lp-comments-start');
+  });
+  document.querySelectorAll('.a4lp-keep').forEach(wrap => {
+    const parent = wrap.parentNode;
+    if (!parent) return;
+    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+    parent.removeChild(wrap);
+  });
   const rememberAttr = (el, name) => {
     const hadAttr = el.hasAttribute(name);
     const value = el.getAttribute(name);
@@ -163,6 +221,17 @@ async function pdfFlow(SITE_RULES) {
       else el.removeAttribute(name);
     });
   };
+  const rememberClass = (el, name) => {
+    if (!el) return;
+    const hadClass = el.classList.contains(name);
+    el.classList.add(name);
+    cleanupActions.push(() => {
+      if (el.isConnected && !hadClass) el.classList.remove(name);
+    });
+  };
+  rememberClass(document.documentElement, 'a4lp-print-root');
+  rememberClass(document.body, 'a4lp-print-root');
+  rememberClass(document.body, 'a4lp-mode-' + layoutMode);
 
   // 0. 触发懒加载（图片+评论模块），总预算 6s
   const origScroll = window.scrollY;
@@ -236,15 +305,22 @@ async function pdfFlow(SITE_RULES) {
       };
     }).filter(Boolean);
   };
-  const pickBestFromSrcset = (srcset) => {
+  const pickBestFromSrcset = (srcset, img) => {
     const candidates = parseSrcset(srcset);
     if (!candidates.length) return '';
     const hasWidth = candidates.some(c => c.width > 0);
-    candidates.sort((a, b) => {
-      if (hasWidth) return (b.width - a.width) || (b.density - a.density);
-      return b.density - a.density;
-    });
-    return candidates[0].url;
+    if (hasWidth) {
+      const renderedWidth = Math.max(
+        img?.getBoundingClientRect?.().width || 0,
+        img?.clientWidth || 0
+      );
+      const targetWidth = Math.min(1800, Math.max(700, Math.round(renderedWidth * 2.35)));
+      const sorted = [...candidates].sort((a, b) => a.width - b.width);
+      return (sorted.find(c => c.width >= targetWidth) || sorted[sorted.length - 1]).url;
+    }
+    const targetDensity = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    const sorted = [...candidates].sort((a, b) => a.density - b.density);
+    return (sorted.find(c => c.density >= targetDensity) || sorted[sorted.length - 1]).url;
   };
   const matchesPictureSource = (source) => {
     const media = (source.getAttribute('media') || '').trim();
@@ -263,7 +339,7 @@ async function pdfFlow(SITE_RULES) {
     const activeSource = pic ? Array.from(pic.querySelectorAll('source[srcset]')).find(matchesPictureSource) : null;
     const srcsetOwner = activeSource || (img.hasAttribute('srcset') ? img : null);
     if (!srcsetOwner) return;
-    const best = pickBestFromSrcset(srcsetOwner.getAttribute('srcset'));
+    const best = pickBestFromSrcset(srcsetOwner.getAttribute('srcset'), img);
     if (!best) return;
     let bestUrl = '';
     try {
@@ -295,19 +371,127 @@ async function pdfFlow(SITE_RULES) {
     5000
   );
 
-  // 0c. 等字体就绪，避免标题/正文打印时还在用 fallback 字形
+  // 0c. 超大图做保守下采样，控制 PDF 体积；跨域或不可导出图片会自动跳过。
+  const compressHugeImage = (img) => {
+    const src = img.currentSrc || img.src || '';
+    if (!src || /^data:image\/svg\+xml/i.test(src)) return;
+    const pixels = (img.naturalWidth || 0) * (img.naturalHeight || 0);
+    const renderedWidth = Math.max(img.getBoundingClientRect?.().width || 0, img.clientWidth || 0);
+    if (pixels < 6000000 && (img.naturalWidth || 0) < 2400) return;
+    if (!renderedWidth || renderedWidth >= (img.naturalWidth || 0) * 0.8) return;
+    const scale = Math.min(
+      1,
+      1800 / Math.max(1, img.naturalWidth || 1),
+      Math.sqrt(5000000 / Math.max(1, pixels))
+    );
+    if (!Number.isFinite(scale) || scale >= 0.98) return;
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    try {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      if (!/^data:image\/jpeg;base64,/i.test(dataUrl)) return;
+      rememberAttr(img, 'src');
+      if (img.hasAttribute('srcset')) rememberAttr(img, 'srcset');
+      img.src = dataUrl;
+      if (img.hasAttribute('srcset')) img.setAttribute('srcset', dataUrl);
+      const pic = img.closest('picture');
+      if (pic) {
+        pic.querySelectorAll('source[srcset]').forEach(source => {
+          rememberAttr(source, 'srcset');
+          source.setAttribute('srcset', dataUrl);
+        });
+      }
+    } catch {}
+  };
+  document.querySelectorAll('img').forEach(compressHugeImage);
+
+  // 0d. 等字体就绪，避免标题/正文打印时还在用 fallback 字形
   if (document.fonts && document.fonts.ready) {
     await withTimeout(document.fonts.ready, 1500);
   }
 
   // 1. 抽取内容（标题/作者/作者介绍/正文/评论）+ 站点豁免（safeKeep / disable）
-  const { titleEl, mainEl, commentEls, extraRemove, authorText, authorBios, safeKeep, disable, rulesMatchedHost } = pickContent(SITE_RULES);
+  const { titleEl, mainEl, commentEls, extraRemove, authorText: extractedAuthorText, authorBios, authorBioEls, safeKeep, disable, rulesMatchedHost } = pickContent(SITE_RULES);
+  let authorText = extractedAuthorText;
   const off = (key) => Array.isArray(disable) && disable.includes(key);
+  const isWSJ = rulesMatchedHost === 'wsj.com';
+  const isNY = rulesMatchedHost === 'newyorker.com';
+  const isEconomist = rulesMatchedHost === 'economist.com';
+  const isFA = rulesMatchedHost === 'foreignaffairs.com';
+  const isCNN = rulesMatchedHost === 'cnn.com';
+  const isCarnegie = rulesMatchedHost === 'carnegieendowment.org';
+  const normalizeText = (s) => (s || '').replace(/\s+/g, ' ').trim();
+  const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const leadBodyP = mainEl ? Array.from(mainEl.querySelectorAll('p')).find(p => {
+    const text = normalizeText(p.innerText || p.textContent || '');
+    return text.length >= 100 && !/^(by\b|updated\b|listen\b|story by\b|more by\b|photo illustration by\b)/i.test(text);
+  }) : null;
+  const leadBodyTop = leadBodyP?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
+  const FRONT_MATTER_TEXT = [
+    ...(isCNN ? [/^UPDATED\b/i, /^Story by\b/i] : []),
+    ...(isNY ? [/^Comment$/i, /^By\s+[A-Z]/, /^[A-Z][a-z]+\s+\d{1,2},\s+\d{4}$/i, /^Photo illustration by\b/i, /^Listen(?:\s*[•·].*)?$/i] : []),
+    ...(isFA ? [/^More by\b/i] : [])
+  ];
+  const TAIL_START_TEXT = [
+    ...(isEconomist ? [/^Explore more$/i, /^For more on the latest\b/i, /^This article appeared in the .* print edition\b/i, /^From the .* edition$/i, /^Discover stories from this section\b/i, /^⇒?\s*Explore the edition$/i, /^More from [A-Z]/i] : []),
+    ...(isCarnegie && layoutMode === 'reading' ? [/^Acknowledgments$/i, /^About the Author$/i, /^Notes$/i, /^More Work from Carnegie Endowment for International Peace$/i] : []),
+    ...(isCarnegie && layoutMode === 'archive' ? [/^More Work from Carnegie Endowment for International Peace$/i] : [])
+  ];
   // safeKeep：站点规则给出的「免疫一切隐藏」选择器集合 + .a4lp-keep 容器
-  const SAFE_GUARD = ['.a4lp-keep', safeKeep].filter(Boolean).join(', ');
+  const SAFE_GUARD = ['.a4lp-keep', '.a4lp-source', '.a4lp-comments-label', safeKeep].filter(Boolean).join(', ');
   const isSafe = (el) => !!(el && el.closest && el.closest(SAFE_GUARD));
+  const keptCommentEls = [];
+  const getNodeMarker = (el) => {
+    const parts = [];
+    let cur = el;
+    for (let i = 0; cur && i < 4; i++, cur = cur.parentElement) {
+      parts.push(cur.id || '');
+      parts.push(cur.className && typeof cur.className === 'string' ? cur.className : '');
+      parts.push(cur.getAttribute && cur.getAttribute('data-testid') || '');
+      parts.push(cur.getAttribute && cur.getAttribute('aria-label') || '');
+      if (cur === mainEl) break;
+    }
+    return parts.join(' ');
+  };
+  const isSupplementalNode = (el) => {
+    if (!el || !mainEl || !mainEl.contains(el)) return false;
+    const marker = getNodeMarker(el);
+    if (/(related|recommended|recommendation|latest|trending|morefrom|more-from|newsletter|buyside|buy-side|author-bio|bylinebio|contributor|spotlight|recirc|mostpopular|editorspicks|reprints|copyright|subscription)/i.test(marker)) return true;
+    const text = normalizeText(el.innerText || el.textContent || '');
+    if (!text) return false;
+    if (/^this copy is for your personal, non-commercial use only/i.test(text)) return true;
+    if (/^(explore more|from the .* edition|discover stories from this section|more from [a-z].*|plot twist newsletter\b|this article appeared in the .* print edition|more work from carnegie endowment for international peace|acknowledgments|about the author|notes|more by\b|listen(?:\s*[•·].*)?)$/i.test(text)) return true;
+    if (/^carnegie does not take institutional positions on public policy issues/i.test(text)) return true;
+    if (isWSJ && /^(write to\s|wsj\s*\|\s*buy side|reviews and recommendations|real estate insights|content provided by|alison sider writes about|ben cohen writes the|for non-personal use or to order multiple copies)/i.test(text)) return true;
+    return false;
+  };
   // 把 safeKeep 节点先打标记，避免后续 keep-path 把它们误伤
   if (safeKeep) document.querySelectorAll(safeKeep).forEach(el => el.classList.add('a4lp-safe'));
+  if (mainEl) rememberClass(mainEl, 'a4lp-main');
+  authorBioEls.forEach(el => {
+    if (!isSafe(el)) el.classList.add('a4lp-hide');
+  });
+
+  commentEls.forEach(el => el.classList.add('a4lp-hide'));
+  if (isWSJ) {
+    document.querySelectorAll([
+      '[data-module-id*="author-bio" i]',
+      '[class*="author-bio" i]',
+      '[class*="bylineBio" i]',
+      '[class*="contributor" i]',
+      '[class*="bio" i][class*="author" i]'
+    ].join(', ')).forEach(el => {
+      if (!isSafe(el)) el.classList.add('a4lp-hide');
+    });
+  }
 
   // 2. 隐藏小漂浮 fixed
   if (!off('fixedHide')) {
@@ -341,6 +525,35 @@ async function pdfFlow(SITE_RULES) {
     });
   }
 
+  // 4b. 打印版权提示 / 当前 URL 回显
+  const currentPath = location.pathname.replace(/\/+$/, '');
+  const currentUrlVariants = new Set([
+    location.href.replace(/[?#].*$/, ''),
+    location.origin.replace(/^https?:\/\//, '') + currentPath,
+    location.hostname.replace(/^www\./, '') + currentPath
+  ].filter(Boolean));
+  document.querySelectorAll('p, div, span, section, small').forEach(el => {
+    if (isSafe(el)) return;
+    if (el.children.length > 2) return;
+    const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!text || text.length > 500) return;
+    if (/this copy is for your personal, non-commercial use only|dow jones reprints|subscriber agreement/i.test(text)) {
+      el.classList.add('a4lp-hide');
+      return;
+    }
+    if (currentUrlVariants.has(text)) el.classList.add('a4lp-hide');
+  });
+  if (isWSJ) {
+    document.querySelectorAll('p, div, span, section, small, figcaption').forEach(el => {
+      if (isSafe(el)) return;
+      const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!text || text.length > 900) return;
+      if (/^(alison sider writes about|ben cohen writes the science of success column|write to alison sider|write to ben cohen|saverio truglia for wsj)$/i.test(text)) {
+        el.classList.add('a4lp-hide');
+      }
+    });
+  }
+
   // 5. 收听/保存/打印/分享类按钮 + 工具条
   if (!off('actionButton')) {
   // 5a. 显式工具条容器（icon-only 按钮没文字，必须靠选择器命中）
@@ -354,6 +567,7 @@ async function pdfFlow(SITE_RULES) {
     '[class*="ContentHeaderRubric" i] [class*="actions" i]',
     '[data-testid*="ActionBar" i]', '[data-testid*="ToolBar" i]', '[data-testid*="ShareBar" i]',
     '[data-testid*="SaveButton" i]', '[data-testid*="BookmarkButton" i]', '[data-testid*="ListenButton" i]',
+    '[data-testid*="Follow" i]', 'button[title*="Follow" i]', 'button[aria-label*="Follow" i]',
     '[aria-label="Save this story" i]', '[aria-label*="Save for later" i]', '[aria-label*="Save article" i]',
     '[aria-label*="Listen to this" i]', '[aria-label*="Listen to article" i]', '[aria-label*="Play audio" i]',
     '[aria-label*="Share this" i]', '[aria-label*="Share article" i]', '[aria-label*="Share on" i]',
@@ -388,11 +602,78 @@ async function pdfFlow(SITE_RULES) {
   });
   } // /actionButton
 
+  const bubbleHideTarget = (el, maxFactor = 2.8, hardMax = 900) => {
+    let target = el;
+    for (let i = 0; i < 2; i++) {
+      const parent = target.parentElement;
+      if (!parent || parent === mainEl || parent === document.body || isSafe(parent)) break;
+      const parentLen = normalizeText(parent.innerText || parent.textContent || '').length;
+      const targetLen = Math.max(1, normalizeText(target.innerText || target.textContent || '').length);
+      if (parentLen <= Math.max(hardMax, targetLen * maxFactor)) target = parent;
+      else break;
+    }
+    return target;
+  };
+  const isAfterLeadBody = (el) => {
+    if (!leadBodyP) return true;
+    return !!(el.compareDocumentPosition(leadBodyP) & Node.DOCUMENT_POSITION_PRECEDING);
+  };
+  const hideLeadMatches = (patterns) => {
+    if (!mainEl || !patterns.length || !Number.isFinite(leadBodyTop)) return;
+    mainEl.querySelectorAll('p, div, span, small, h2, h3, h4, section, header, figure, figcaption, li, time').forEach(el => {
+      if (isSafe(el) || el.closest('.a4lp-hide')) return;
+      const rect = el.getBoundingClientRect();
+      if (!rect.height || rect.bottom > leadBodyTop + 48) return;
+      const text = normalizeText(el.innerText || el.textContent || '');
+      if (!text || text.length > 500) return;
+      if (!patterns.some(re => re.test(text))) return;
+      bubbleHideTarget(el).classList.add('a4lp-hide');
+    });
+  };
+  const hideFromNodeToEnd = (node) => {
+    if (!node || !mainEl || !mainEl.contains(node)) return;
+    const start = bubbleHideTarget(node, 3.2, 4000);
+    start.classList.add('a4lp-hide');
+    let cur = start;
+    while (cur && cur !== mainEl) {
+      let sib = cur.nextElementSibling;
+      while (sib) {
+        const next = sib.nextElementSibling;
+        if (!isSafe(sib)) sib.classList.add('a4lp-hide');
+        sib = next;
+      }
+      cur = cur.parentElement;
+    }
+  };
+  const stripFromMarker = (patterns) => {
+    if (!mainEl || !patterns.length) return;
+    const marker = Array.from(mainEl.querySelectorAll('h1, h2, h3, h4, p, div, section, aside, li')).find(el => {
+      if (isSafe(el) || el.closest('.a4lp-hide')) return false;
+      if (!isAfterLeadBody(el)) return false;
+      const text = normalizeText(el.innerText || el.textContent || '');
+      if (!text || text.length > 600) return false;
+      return patterns.some(re => re.test(text));
+    });
+    if (marker) hideFromNodeToEnd(marker);
+  };
+  if (FRONT_MATTER_TEXT.length) hideLeadMatches(FRONT_MATTER_TEXT);
+  if (TAIL_START_TEXT.length) stripFromMarker(TAIL_START_TEXT);
+  if (isCarnegie) {
+    document.querySelectorAll('p, div, span, section, small').forEach(el => {
+      if (isSafe(el)) return;
+      const text = normalizeText(el.innerText || el.textContent || '');
+      if (/^carnegie does not take institutional positions on public policy issues/i.test(text)) {
+        bubbleHideTarget(el, 3.2, 2000).classList.add('a4lp-hide');
+      }
+    });
+  }
+
   // 5c. 文末卡片条清理：仅清理 mainEl 内、正文尾部之后的明显 recirc 模块，
   // 不再按“最后一个长段落之后全部隐藏”的方式截断，避免误删合法短结尾。
   if (mainEl && !off('trailingCardStrip')) {
     const substantive = [];
     mainEl.querySelectorAll('p, blockquote, figure, li, h2, h3, h4, pre, table').forEach(el => {
+      if (isSupplementalNode(el)) return;
       const t = (el.innerText || '').trim();
       if (el.tagName === 'FIGURE' || el.tagName === 'TABLE' || t.length >= 60) substantive.push(el);
     });
@@ -426,8 +707,8 @@ async function pdfFlow(SITE_RULES) {
           const next = sib.nextElementSibling;
           if (!sib.closest('.a4lp-hide') &&
               !isSafe(sib) &&
-              !commentEls.some(c => c === sib || c.contains(sib) || sib.contains(c)) &&
-              looksLikeRecirculation(sib)) {
+              !keptCommentEls.some(c => c === sib || c.contains(sib) || sib.contains(c)) &&
+              (isWSJ || looksLikeRecirculation(sib) || isSupplementalNode(sib))) {
             sib.classList.add('a4lp-hide');
           }
           sib = next;
@@ -450,7 +731,7 @@ async function pdfFlow(SITE_RULES) {
       }
       keepRoots.add(tb);
     }
-    commentEls.forEach(el => keepRoots.add(el));
+    keptCommentEls.forEach(el => keepRoots.add(el));
     // safeKeep 节点同样视为 keep root，避免被「不在 path 上」的兄弟逻辑挤掉
     if (safeKeep) document.querySelectorAll(safeKeep).forEach(el => keepRoots.add(el));
 
@@ -478,17 +759,21 @@ async function pdfFlow(SITE_RULES) {
   const titleText = (titleEl?.innerText || document.title || '').trim();
   const today = new Date();
   const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  const sourceHost = location.hostname.replace(/^www\./, '');
+  const inlineSource = sourceHost + (location.pathname && location.pathname !== '/' ? location.pathname : '');
 
   const insertHost = document.createElement('div');
   insertHost.className = 'a4lp-source';
 
-  // 7a. 封面页
-  let html = '<section class="a4lp-cover">' +
-    '<div class="a4lp-cover-kicker">SAVED WEBPAGE · ' + escapeHtml(dateStr) + '</div>' +
+  // 7a. 封面页 / 阅读版抬头
+  let html = '<section class="a4lp-cover a4lp-cover--' + layoutMode + '">' +
+    '<div class="a4lp-cover-kicker">' +
+      (layoutMode === 'archive' ? 'SAVED WEBPAGE · ' + escapeHtml(dateStr) : 'READING COPY · ' + escapeHtml(dateStr)) +
+    '</div>' +
     (titleText ? '<h1 class="a4lp-cover-title">' + escapeHtml(titleText) + '</h1>' : '') +
     (authorText ? '<div class="a4lp-cover-by">BY ' + escapeHtml(authorText) + '</div>' : '');
 
-  if (authorBios && authorBios.length) {
+  if (layoutMode === 'archive' && authorBios && authorBios.length) {
     html += '<div class="a4lp-authors"><div class="a4lp-authors-h">作者介绍 / Authors</div>';
     authorBios.forEach(b => {
       html += '<div class="a4lp-author">';
@@ -500,25 +785,47 @@ async function pdfFlow(SITE_RULES) {
     html += '</div>';
   }
 
-  html += '<div class="a4lp-cover-source"><span>SOURCE</span><div class="a4lp-cover-url">' + escapeHtml(location.href) + '</div></div>';
+  html += '<div class="a4lp-cover-source"><span>SOURCE</span><div class="a4lp-cover-url">' +
+    escapeHtml(layoutMode === 'archive' ? location.href : inlineSource) +
+    '</div></div>';
 
-  // 7b. 自动目录：扫 mainEl 内 h1/h2/h3，放在封面内（与封面共用一个分页）
+  // 7b. 自动目录：短目录内联；长目录独立分页
   const headings = mainEl ? Array.from(mainEl.querySelectorAll('h1, h2, h3')).filter(h => {
     if (h === titleEl) return false;
     if (h.closest('.a4lp-hide')) return false;
+    if (isSupplementalNode(h)) return false;
     return (h.innerText || '').trim().length > 0;
   }) : [];
-  if (headings.length >= 2) {
-    html += '<nav class="a4lp-toc"><div class="a4lp-toc-h">目录 / Contents</div><ul>';
+  const firstBodyP = mainEl ? Array.from(mainEl.querySelectorAll('p')).find(p => {
+    if (p.closest('.a4lp-hide') || isSupplementalNode(p)) return false;
+    return (p.innerText || '').trim().length >= 100;
+  }) : null;
+  const headingChars = headings.reduce((sum, h) => sum + (h.innerText || '').trim().length, 0);
+  const tocMinHeadings = layoutMode === 'archive' ? 3 : 4;
+  const separateToc = headings.length > 8 || headingChars > 280;
+  const renderToc = () => {
+    if (off('toc')) return '';
+    if (headings.length < tocMinHeadings) return '';
+    let tocHtml = '<nav class="a4lp-toc"><div class="a4lp-toc-h">目录 / Contents</div><ul>';
     let slug = 0;
     headings.forEach(h => {
+      if (firstBodyP && (h.compareDocumentPosition(firstBodyP) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+      if (h.closest('a') || h.querySelector('a')) return;
       if (!h.id) h.id = 'a4lp-toc-' + (++slug);
       const lvl = Number(h.tagName[1]);
-      html += '<li class="a4lp-toc-l' + lvl + '"><a href="#' + h.id + '">' + escapeHtml((h.innerText || '').trim()) + '</a></li>';
+      tocHtml += '<li class="a4lp-toc-l' + lvl + '"><a href="#' + h.id + '">' + escapeHtml((h.innerText || '').trim()) + '</a></li>';
     });
-    html += '</ul></nav>';
+    tocHtml += '</ul></nav>';
+    return tocHtml.includes('<li ') ? tocHtml : '';
+  };
+  const tocHtml = renderToc();
+  if (tocHtml && !separateToc) {
+    html += tocHtml;
   }
   html += '</section>'; // 关闭 .a4lp-cover
+  if (tocHtml && separateToc) {
+    html += '<section class="a4lp-toc-page">' + tocHtml + '</section>';
+  }
 
   insertHost.innerHTML = html;
   document.body.insertBefore(insertHost, document.body.firstChild);
@@ -536,7 +843,9 @@ async function pdfFlow(SITE_RULES) {
     author: authorText,
     authorBioCount: authorBios?.length || 0,
     headingCount: headings.length,
-    commentContainers: commentEls.length,
+    commentContainers: keptCommentEls.length,
+    layoutMode,
+    separateToc,
     siteRulesHit: rulesMatchedHost || '(generic)',
     safeKeep: safeKeep || '(none)',
     disabled: Array.isArray(disable) && disable.length ? disable.join(',') : '(none)'
@@ -625,22 +934,22 @@ async function pdfFlow(SITE_RULES) {
     };
     const mainCandidates = [];
     const seen = new Set();
-    const tryAdd = (el, fromRule) => {
+    const tryAdd = (el, fromRule, priority = 999) => {
       if (!el || !el.isConnected || seen.has(el)) return;
       seen.add(el);
       const text = (el.innerText || '').trim().length;
       if (text < 200) return;
       const s = score(el);
       if (s < 200) return;
-      mainCandidates.push({ el, score: s, fromRule: !!fromRule });
+      mainCandidates.push({ el, score: s, fromRule: !!fromRule, priority });
     };
     if (rules?.main) {
-      rules.main.split(',').map(s => s.trim()).forEach(sel => {
-        document.querySelectorAll(sel).forEach(el => tryAdd(el, true));
+      rules.main.split(',').map(s => s.trim()).forEach((sel, index) => {
+        document.querySelectorAll(sel).forEach(el => tryAdd(el, true, index));
       });
     }
     ['article', 'main', '[role="main"]', '#content', '#main', '.post', '.article', '.entry-content']
-      .forEach(sel => document.querySelectorAll(sel).forEach(el => tryAdd(el, false)));
+      .forEach((sel, index) => document.querySelectorAll(sel).forEach(el => tryAdd(el, false, 100 + index)));
     // 兜底：扫所有 div/section，挑段落分数最高的一个
     let bestDiv = null, bestDivScore = 0;
     document.querySelectorAll('div, section').forEach(el => {
@@ -656,6 +965,7 @@ async function pdfFlow(SITE_RULES) {
       // 命中站点规则的优先；同组内分数最高者胜出
       mainCandidates.sort((a, b) => {
         if (a.fromRule !== b.fromRule) return a.fromRule ? -1 : 1;
+        if (a.priority !== b.priority) return a.priority - b.priority;
         return b.score - a.score;
       });
       mainEl = mainCandidates[0].el;
@@ -692,39 +1002,67 @@ async function pdfFlow(SITE_RULES) {
     });
 
     // author 抽取：站点规则 → meta 标签 → schema.org → byline 启发式
-    let authorText = '';
+    const escapeRegex = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const cleanAuthor = (s) => (s || '')
       .replace(/\s+/g, ' ')
-      .replace(/^\s*(by|作者|文\/|文：|撰文|文)\s*[:：]?\s*/i, '')
+      .replace(/^\s*(by|story by|from|作者|文\/|文：|撰文|文)\s*[:：]?\s*/i, '')
+      .replace(/\s*[|•·]\s*\d+\s+min(?:ute)?s?\s+read\b/ig, '')
+      .replace(/\s*,?\s*updated\b.*$/i, '')
+      .replace(/^[,;|•·\s]+|[,;|•·\s]+$/g, '')
       .trim()
       .slice(0, 200);
-    if (rules?.author) {
-      const nodes = document.querySelectorAll(rules.author);
-      const names = new Set();
-      nodes.forEach(n => { const t = cleanAuthor(n.innerText || n.textContent); if (t && t.length < 80) names.add(t); });
-      authorText = [...names].join(', ');
-    }
-    if (!authorText) {
-      const meta = document.querySelector('meta[name="author"], meta[property="article:author"], meta[name="byl"], meta[name="parsely-author"]');
-      if (meta) authorText = cleanAuthor(meta.getAttribute('content'));
-    }
-    if (!authorText) {
-      const sch = document.querySelector('[itemprop="author"] [itemprop="name"], [itemprop="author"]');
-      if (sch) authorText = cleanAuthor(sch.innerText || sch.textContent);
-    }
-    if (!authorText) {
+    const authorCount = (s) => cleanAuthor(s).split(/\s*,\s*/).filter(Boolean).length;
+    const isPublicationName = (s) => /^(the new yorker|foreign affairs|carnegie endowment(?: for international peace)?|wsj|wall street journal|cnn)$/i.test(cleanAuthor(s));
+    const pickAuthorFromSelector = (selector) => {
+      const scopes = [];
+      const titleScope = titleEl?.closest('header, article, main, section');
+      if (titleScope) scopes.push(titleScope);
+      if (mainEl && !scopes.includes(mainEl)) scopes.push(mainEl);
+      scopes.push(document);
+      let best = null;
+      for (const scope of scopes) {
+        const nodes = scope === document ? document.querySelectorAll(selector) : scope.querySelectorAll(selector);
+        nodes.forEach(el => {
+          const text = cleanAuthor(el.innerText || el.textContent);
+          if (!text || text.length > 180 || isPublicationName(text)) return;
+          let score = 0;
+          const rect = el.getBoundingClientRect();
+          const titleRect = titleEl?.getBoundingClientRect();
+          if (mainEl && mainEl.contains(el)) score += 20;
+          if (titleRect && rect.top >= titleRect.top - 80 && rect.top <= titleRect.bottom + 520) score += 60;
+          if (/^by\s+/i.test((el.innerText || el.textContent || '').trim())) score += 20;
+          const count = authorCount(text);
+          if (count === 1) score += 25;
+          else if (count === 2) score += 12;
+          else if (count > 4) score -= 40;
+          if (text.length <= 60) score += 15;
+          else if (text.length > 120) score -= 20;
+          if (/(listen|updated|minute read|newsletter|follow|source|comment|staff writer at)/i.test(text)) score -= 60;
+          if (!best || score > best.score) best = { text, score };
+        });
+        if (best && best.score >= 50 && scope !== document) break;
+      }
+      return best?.text || '';
+    };
+    const ruleAuthor = rules?.author ? pickAuthorFromSelector(rules.author) : '';
+    const meta = document.querySelector('meta[name="author"], meta[property="article:author"], meta[name="byl"], meta[name="parsely-author"]');
+    const metaAuthor = meta ? cleanAuthor(meta.getAttribute('content')) : '';
+    const sch = document.querySelector('[itemprop="author"] [itemprop="name"], [itemprop="author"]');
+    const schemaAuthor = sch ? cleanAuthor(sch.innerText || sch.textContent) : '';
+    let fallbackAuthor = '';
+    if (!fallbackAuthor) {
       const scope = mainEl || document.body;
       const cand = scope.querySelector('[rel="author"], .author, .byline, [class*="byline" i], [class*="Byline"], [class*="author-name" i]');
-      if (cand) authorText = cleanAuthor(cand.innerText || cand.textContent);
+      if (cand) fallbackAuthor = cleanAuthor(cand.innerText || cand.textContent);
     }
+    const provisionalAuthor = ruleAuthor || metaAuthor || schemaAuthor || fallbackAuthor;
 
     // authorBios 抽取：站点规则的 authorBio 选择器 + 通用 fallback
     // 每个 bio 解析出 {name, role, bio}，去重后返回。
     const bioSelector = [
       rules?.authorBio || '',
       '[class*="author-bio" i]', '[class*="contributor-bio" i]', '[class*="contributor-info" i]',
-      '[class*="AuthorBio"]', '[class*="ContributorBio"]',
-      '[itemprop="author"]'
+      '[class*="AuthorBio"]', '[class*="ContributorBio"]'
     ].filter(Boolean).join(',');
     const bioEls = [];
     document.querySelectorAll(bioSelector).forEach(el => {
@@ -738,11 +1076,14 @@ async function pdfFlow(SITE_RULES) {
       bioEls.push(el);
     });
     const parseBio = (el) => {
+      const siteNameRe = /^(the new yorker|foreign affairs|carnegie endowment(?: for international peace)?|wsj|wall street journal|cnn)$/i;
       const nameEl = el.querySelector('a[href*="/people/"], a[href*="/author"], a[href*="/expert"], h2 a, h3 a, h2, h3, .name, [class*="name" i] a, [class*="name" i], strong');
-      const name = cleanAuthor(nameEl?.innerText || nameEl?.textContent || '');
+      let name = cleanAuthor(nameEl?.innerText || nameEl?.textContent || '');
+      if (siteNameRe.test(name)) name = '';
       const roleEl = el.querySelector('.title, .position, .role, [class*="title" i]:not(h1):not(h2):not(h3), [class*="position" i], [class*="role" i], em, small');
       let role = (roleEl?.innerText || roleEl?.textContent || '').replace(/\s+/g, ' ').trim();
       if (role && name && role.toLowerCase().includes(name.toLowerCase())) role = '';
+      if (siteNameRe.test(role)) role = '';
       role = role.slice(0, 200);
       let bio = '';
       const ps = el.querySelectorAll('p');
@@ -755,6 +1096,15 @@ async function pdfFlow(SITE_RULES) {
         if (name) bio = bio.replace(name, '').trim();
         if (role) bio = bio.replace(role, '').trim();
       }
+      if (!name) {
+        const lead = bio.match(/^([A-Z][A-Za-z.'’\-]+(?:\s+[A-Z][A-Za-z.'’\-]+){1,4})\s+(?:is|was|writes|covers|has been|serves|holds)\b/);
+        if (lead) name = cleanAuthor(lead[1]);
+      }
+      if (!name && provisionalAuthor && authorCount(provisionalAuthor) <= 2) {
+        const primary = provisionalAuthor.split(/\s*,\s*/)[0];
+        if (primary && bio.toLowerCase().startsWith(primary.toLowerCase() + ' ')) name = primary;
+      }
+      if (name) bio = bio.replace(new RegExp('^' + escapeRegex(name) + '\\s+'), '').trim();
       bio = bio.slice(0, 600);
       return { name, role, bio };
     };
@@ -768,10 +1118,23 @@ async function pdfFlow(SITE_RULES) {
       seenNames.add(key);
       dedupBios.push(b);
     });
+    let authorText = provisionalAuthor;
+    const primaryBioName = dedupBios.find(b => b.name)?.name || '';
+    if (rulesMatchedHost === 'newyorker.com' && authorCount(authorText) > 3) {
+      if (metaAuthor && authorCount(metaAuthor) <= 2) authorText = metaAuthor;
+      else if (primaryBioName) authorText = primaryBioName;
+    }
+    if ((!authorText || authorCount(authorText) > 4 || authorText.length > 120) && metaAuthor && authorCount(metaAuthor) <= 2) {
+      authorText = metaAuthor;
+    }
+    if ((!authorText || isPublicationName(authorText)) && primaryBioName) {
+      authorText = primaryBioName;
+    }
 
     return {
       titleEl, mainEl, commentEls,
       extraRemove: rules?.extraRemove || '',
+      authorBioEls: bioEls,
       authorText, authorBios: dedupBios,
       safeKeep: rules?.safeKeep || '',
       disable: Array.isArray(rules?.disable) ? rules.disable : [],
