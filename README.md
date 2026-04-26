@@ -45,15 +45,6 @@
 
 **抽取 → 标记 → 打印**。`flow.js` 按 `SITE_RULES` 抽出标题 / 作者 / 正文，标记非正文节点为 `.a4lp-hide`、把图与 caption 包成 `.a4lp-keep` 不跨页，注入封面 / 目录 / 作者卡，再调 `window.print()`（Economist 走 iframe 沙箱避开 Skia 跨页 ghost paint）。详细机制、新增站点步骤、现存站点规则索引见 [docs/SITE_CUSTOMIZATION.md](docs/SITE_CUSTOMIZATION.md)；版本记录见 [CHANGELOG](CHANGELOG.md)；隐私政策见 [PRIVACY](PRIVACY.md)。
 
-## 已知限制
-
-- 跨域 `<img>`（CDN 且未带 `crossorigin`）会污染 canvas，超大图压缩静默跳过，PDF 体积可能偏大
-- 大图重采样统一重编码为 JPEG，透明 PNG 加白底
-- caption 检测基于启发式（标签 / 类名 / 长度），少数站点可能漏识别；图本身在 `<figure>` 内则始终生效。caption 过长时，图 + caption 组合仍可能超过单页高度被拆分
-- 站点自带 sticky / fixed 元素若占据视口 ≥ 30% 面积不会被自动隐藏
-- 跨域 iframe 内的图片不受样式控制
-- iframe 沙箱路径目前只在 Economist 启用，全量推广卡在配图问题
-
 ## 文件结构
 
 ```text

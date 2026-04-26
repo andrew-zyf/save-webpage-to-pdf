@@ -92,3 +92,12 @@
 - 通用 byline / author-bio 选择器作为 fallback；广告占位（`adsbygoogle` / `[id*="ad-"]` 等）全站隐藏
 - 收听 / 分享 / 打印 / 订阅类按钮按 `ACTION_RE`（文本 + aria-label）匹配
 - "段落短文本子序列重叠 ≥ 0.75 视作 ghost" —— 起源是 Economist 字体半加载问题，目前全站启用；其他站若误伤再收窄
+
+## 已知限制
+
+- 跨域 `<img>`（CDN 且未带 `crossorigin`）会污染 canvas，超大图压缩静默跳过，PDF 体积可能偏大
+- 大图重采样统一重编码为 JPEG，透明 PNG 加白底
+- caption 检测基于启发式（标签 / 类名 / 长度），少数站点可能漏识别；图本身在 `<figure>` 内则始终生效。caption 过长时，图 + caption 组合仍可能超过单页高度被拆分
+- 站点自带 sticky / fixed 元素若占据视口 ≥ 30% 面积不会被自动隐藏
+- 跨域 iframe 内的图片不受样式控制
+- iframe 沙箱路径目前只在 Economist 启用，全量推广卡在配图问题
