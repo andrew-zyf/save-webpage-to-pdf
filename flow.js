@@ -192,6 +192,13 @@ html, body {
   max-width: 100%; max-height: 95mm; width: auto; height: auto;
   object-fit: contain;
 }
+.a4lp-cover-hero-caption {
+  margin: 3mm auto 0;
+  font-size: 9pt; line-height: 1.45; color: #555;
+  text-align: center;
+  font-style: italic;
+  max-width: 92%;
+}
 .a4lp-cover-source {
   margin-top: 10mm; padding-top: 5mm; border-top: 1px solid #ccc;
   font-size: 9.5pt; color: #666;
@@ -200,9 +207,11 @@ html, body {
   letter-spacing: 0.2em; text-transform: uppercase;
   display: block; margin-bottom: 2mm;
 }
-.a4lp-cover-url {
+a.a4lp-cover-url, .a4lp-cover-url {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #333; word-break: break-all; font-size: 9.5pt;
+  color: #333; word-break: break-all; overflow-wrap: anywhere;
+  font-size: 9.5pt; text-decoration: none;
+  display: block;
 }
 .a4lp-authors {
   border: 1px solid #ddd; border-left: 3px solid #888;
@@ -1536,6 +1545,35 @@ async function pdfFlow(SITE_RULES, options = {}) {
     }
   }
   if (!coverHeroSrc) coverHeroSrc = metaHeroSrc;
+
+  // 抽取 hero 图的配图说明（figcaption / 紧邻 caption-like 元素 / alt 兜底）
+  // 一并搬到封面，让首页同时呈现「图 + 标注」。所有站点统一这条逻辑。
+  let coverHeroCaption = '';
+  if (coverHeroEl) {
+    const cleanCap = (s) => (s || '').replace(/\s+/g, ' ').trim().slice(0, 280);
+    const fig = coverHeroEl.closest('figure');
+    if (fig) {
+      const fc = fig.querySelector('figcaption');
+      if (fc) coverHeroCaption = cleanCap(fc.innerText || fc.textContent);
+      if (!coverHeroCaption) {
+        const captionLike = fig.querySelector('[class*="caption" i], [class*="Caption" i], [class*="credit" i], [class*="Credit" i]');
+        if (captionLike) coverHeroCaption = cleanCap(captionLike.innerText || captionLike.textContent);
+      }
+    }
+    if (!coverHeroCaption) {
+      // 紧邻兄弟（figure 外）：常见结构 <img>+<p class="caption">…
+      const sib = coverHeroEl.parentElement?.nextElementSibling;
+      if (sib && /caption|credit/i.test(sib.className || '')) {
+        const t = cleanCap(sib.innerText || sib.textContent);
+        if (t.length >= 4 && t.length <= 280) coverHeroCaption = t;
+      }
+    }
+    if (!coverHeroCaption && coverHeroEl.alt) {
+      const altT = cleanCap(coverHeroEl.alt);
+      // alt 太短（一两词）多半是 SEO 字串，不当 caption 用
+      if (altT.length >= 16) coverHeroCaption = altT;
+    }
+  }
   // 同时把所有 fallback/占位图全局隐藏 —— 它们不该出现在正文里污染版面
   document.querySelectorAll('img').forEach(img => {
     const src = img.currentSrc || img.src || '';
@@ -1547,14 +1585,15 @@ async function pdfFlow(SITE_RULES, options = {}) {
     }
   });
 
-  // 7a. 封面页
+  // 7a. 封面页：顺序为 kicker → 标题 → BY 行 → 作者介绍卡 → hero 图 → SOURCE。
+  // 作者介绍紧贴 BY 行下方（标题视觉单元的合适位置），让读者扫一眼标题就能
+  // 看到作者背景，不必跳到尾页找 bio。所有站点统一这个位置。
   let html = '<section class="a4lp-cover a4lp-cover--' + layoutMode + '">' +
     '<div class="a4lp-cover-kicker">' +
       'SAVED WEBPAGE · ' + escapeHtml(dateStr) +
     '</div>' +
     (titleText ? '<h1 class="a4lp-cover-title">' + escapeHtml(titleText) + '</h1>' : '') +
-    (authorText ? '<div class="a4lp-cover-by">BY ' + escapeHtml(authorText) + '</div>' : '') +
-    (coverHeroSrc ? '<div class="a4lp-cover-hero"><img src="' + escapeHtml(coverHeroSrc) + '" alt="" loading="eager" decoding="sync" fetchpriority="high"></div>' : '');
+    (authorText ? '<div class="a4lp-cover-by">BY ' + escapeHtml(authorText) + '</div>' : '');
 
   if (authorBios && authorBios.length) {
     html += '<div class="a4lp-authors"><div class="a4lp-authors-h">作者介绍 / Authors</div>';
@@ -1568,9 +1607,21 @@ async function pdfFlow(SITE_RULES, options = {}) {
     html += '</div>';
   }
 
-  html += '<div class="a4lp-cover-source"><span>SOURCE</span><div class="a4lp-cover-url">' +
+  if (coverHeroSrc) {
+    html += '<div class="a4lp-cover-hero"><img src="' + escapeHtml(coverHeroSrc) + '" alt="" loading="eager" decoding="sync" fetchpriority="high">';
+    if (coverHeroCaption) {
+      html += '<div class="a4lp-cover-hero-caption">' + escapeHtml(coverHeroCaption) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // SOURCE URL：用真正的 <a href> 包裹纯文本。Chrome 保存 PDF 时自动给裸 URL
+  // 文本生成的 hotspot 只覆盖第一行 line box，URL 跨行就只能点中第一行；
+  // anchor 元素跨行时浏览器会为每一行 line box 都生成独立 hotspot。
+  html += '<div class="a4lp-cover-source"><span>SOURCE</span>' +
+    '<a class="a4lp-cover-url" href="' + escapeHtml(location.href) + '">' +
     escapeHtml(location.href) +
-    '</div></div>';
+    '</a></div>';
 
   // 7b. 自动目录：短目录内联；长目录独立分页
   const TOC_BLACKLIST_RE = /^(related content|recommended reading|see also|recirculation|recommendation|read next|what to read next|more to read|more from [a-z].*|more work from\b|explore more|tags?|share this|sign up|subscribe|newsletter|comments?|related articles?|further reading)$/i;

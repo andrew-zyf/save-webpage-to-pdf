@@ -517,17 +517,29 @@
     height: auto !important;
     object-fit: contain !important;
   }
+  .a4lp-cover-hero-caption {
+    margin: 3mm auto 0 !important;
+    font-size: 9pt !important;
+    line-height: 1.45 !important;
+    color: #555 !important;
+    text-align: center !important;
+    font-style: italic !important;
+    max-width: 92% !important;
+  }
   .a4lp-cover-source span {
     letter-spacing: 0.2em;
     text-transform: uppercase;
     display: block;
     margin-bottom: 2mm;
   }
-  .a4lp-cover-url {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    color: #333;
-    word-break: break-all;
-    font-size: var(--a4lp-font-meta);
+  a.a4lp-cover-url, .a4lp-cover-url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
+    color: #333 !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+    font-size: var(--a4lp-font-meta) !important;
+    text-decoration: none !important;
+    display: block !important;
   }
 
   .a4lp-authors {
