@@ -43,7 +43,7 @@
 
 ## 工作原理
 
-**抽取 → 标记 → 打印**。`flow.js` 按 `SITE_RULES` 抽出标题 / 作者 / 正文，标记非正文节点为 `.a4lp-hide`、把图与 caption 包成 `.a4lp-keep` 不跨页，注入封面 / 目录 / 作者卡，再调 `window.print()`（Economist 走 iframe 沙箱避开 Skia 跨页 ghost paint）。详细机制、新增站点步骤、现存站点规则索引见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+**抽取 → 标记 → 打印**：`flow.js` 抽出标题 / 作者 / 正文，标记非正文节点不跨页，注入封面 / 目录 / 作者卡后触发打印。详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
 ## 文件结构
 
