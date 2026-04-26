@@ -4,13 +4,14 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 
 - 自动抽取 **标题 / 作者 / 作者介绍 / 正文**，无需确认直接打印
 - 提供 **阅读版 / 归档版** 两种布局
+- 默认保存文件名会自动追加英文尾缀：` - reading` 或 ` - archive`
 - **封面页**：日期 + 大标题 + 作者署名 + 作者介绍卡 + 原文 URL（独占首页，`break-after: page`）
 - **自动目录**：扫正文 h1/h2/h3，用 `target-counter()` 渲染章节 + 页码（Chrome 120+）；长目录自动独立分页
 - 图片不跨页、说明（caption）与图同页、超大图等比缩到单页；按打印目标尺寸选择合适的 `srcset` 候选，并对超大图片做保守下采样，减少 PDF 体积
 - 自动展开 `<details>` 与「Show more / 展开」按钮，触发懒挂载内容；打印后恢复临时 DOM 变更
 - 强制浅色：覆盖站点 dark-mode；正文列宽、标题层级、列表 / 引文 / 表格样式针对 PDF 阅读优化
 - 自动隐藏小漂浮 fixed、广告占位文字、收听/打印/分享类按钮
-- 内置站点规则（WSJ / Foreign Affairs / New Yorker / Economist / Carnegie / CSIS / CNN）抽取标题/作者/作者介绍/正文；额外清理站点前言元信息、作者简介、推荐流和机构尾注
+- 内置多站点规则抽取标题/作者/作者介绍/正文；额外清理前言元信息、作者简介、推荐流和机构尾注
 - 控制台输出抽取诊断（标题、main 容器、字数、段落数、作者数、章节数、评论容器数）便于反馈调优
 
 ## 安装
@@ -34,11 +35,20 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 - 样张目录：`examples/`
 - 详细对比：`examples/README.md`
 - 组织方式：每篇文章一个子目录，统一保留 `reading.pdf` 与 `archive.pdf`
-- 当前样张覆盖：`WSJ`、`The New Yorker`、`The Economist`、`Foreign Affairs`、`CNN`、`Carnegie`、`CSIS`
+
+| Site | Reading | Archive |
+| --- | --- | --- |
+| `Carnegie` | `examples/carnegie-ai-labor-debate/reading.pdf` | `examples/carnegie-ai-labor-debate/archive.pdf` |
+| `CNN` | `examples/cnn-mali-insurgents/reading.pdf` | `examples/cnn-mali-insurgents/archive.pdf` |
+| `CSIS` | `examples/csis-wartime-oil-prices/reading.pdf` | `examples/csis-wartime-oil-prices/archive.pdf` |
+| `Economist` | `examples/economist-rhetoric-of-war/reading.pdf` | `examples/economist-rhetoric-of-war/archive.pdf` |
+| `Foreign Affairs` | `examples/foreignaffairs-china-russia-iran/reading.pdf` | `examples/foreignaffairs-china-russia-iran/archive.pdf` |
+| `New Yorker` | `examples/newyorker-jd-vance/reading.pdf` | `examples/newyorker-jd-vance/archive.pdf` |
+| `WSJ` | `examples/wsj-united-card-counting/reading.pdf` | `examples/wsj-united-card-counting/archive.pdf` |
 
 ## 实现说明
 
-- `print.css` 注入 `@page { size: A4 portrait; margin: 15mm 18mm 15mm 20mm }` 与 `break-inside: avoid` 规则；图片本体高度上限 247mm（A4 竖向可用区 267mm 减去 ~20mm 给 caption）
+- `print.css` 注入 `@page { size: A4 portrait; margin: 11mm 12mm 11mm 13mm }` 与 `break-inside: avoid` 规则；正文列宽按 `阅读版 154mm / 归档版 160mm` 控制，图片本体高度上限约 `255mm`
 - `popup.js` 在调用 `window.print()` 前：
   - 读取弹窗选项：`阅读版（推荐）` 与 `归档版`
   - 滚动整页触发懒加载（最长 6s 预算），把 `loading="lazy"` 临时改为 eager，并等待全部 `<img>` 加载完成（单图 2s / 整体 5s 上限）
@@ -46,7 +56,7 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
   - 用站点规则或启发式（最大 H1、按 `<p>` 文本评分扣减链接文本/链接数惩罚）抽取标题与正文；命中站点规则的容器优先于通用候选
   - author 抽取顺序：站点规则 → `meta[name=author]` 等 → schema.org `[itemprop=author]` → byline 启发式；优先靠近标题的 byline，清洗 "By/Story by/作者/文：" 前缀与 `UPDATED`/`min read` 噪声
   - 隐藏小尺寸 `position:fixed` 漂浮元素（< 视口面积 30%）、广告占位文字、收听/打印/分享类按钮
-  - 站点前言 / 文末清理：去掉 `Listen`、重复 `Byline`、`More by`、`Explore more`、`More from ...`、`More Work from Carnegie...`、机构免责声明等非正文块
+  - 站点前言 / 文末清理：去掉 `Listen`、重复 `Byline`、`More by`、`Explore more`、`More from ...`、机构免责声明等非正文块
   - 标记不在 keep-path 上的兄弟节点为 `.a4lp-hide`
   - 在正文前插入阅读版或归档版抬头；长目录（>8 个标题或总字数较长）自动独立分页
   - 扫描裸 `<img>`，若紧邻兄弟元素像说明（`figcaption` / 含 caption/figure/desc/note 类名 / 短 `<em><small><i>`），自动包进 `.a4lp-keep` 容器，让图与说明成组不跨页
@@ -59,6 +69,10 @@ Chrome 扩展（MV3）：一键将当前网页保存为**竖向 A4 PDF**。
 - 站点自带的 sticky/fixed 元素如果占据较大面积（≥ 视口 30%）不会被自动隐藏
 - 「caption 检测」基于启发式（标签名、类名、长度），少数站点可能漏识别；若图片本身在 `<figure>` 中则始终生效
 
+## License
+
+- `MIT`，见 `LICENSE`
+
 ## 文件结构
 
 ```
@@ -69,5 +83,6 @@ save-webpage-to-pdf/
 ├── popup.js        抽取 + 确认 + 触发打印
 ├── print.css       @page + 防跨页规则
 ├── icons/          16/48/128 图标
+├── LICENSE         MIT 许可证
 └── README.md
 ```

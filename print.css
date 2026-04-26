@@ -1,8 +1,8 @@
-/* 每页边距：上下 15mm、左右 18mm（左侧略宽，给装订/打孔留余地）。
+/* 每页边距：左右留白适中，优先给正文更多宽度。
    注意：因为 @page margin > 0，Chrome 打印对话框里"页眉和页脚"
    选项会出现，需要用户手动取消勾选（取消一次后 Chrome 会记住）。 */
-@page { size: A4 portrait; margin: 15mm 18mm 15mm 20mm; }
-@page :first { margin: 25mm 22mm; }
+@page { size: A4 portrait; margin: 11mm 12mm 11mm 13mm; }
+@page :first { margin: 18mm 14mm; }
 
 @media print {
   body.a4lp-print-root {
@@ -12,8 +12,8 @@
     color: #161616 !important;
     -webkit-font-smoothing: antialiased;
   }
-  body.a4lp-mode-reading { --a4lp-measure: 132mm; --a4lp-cover-measure: 138mm; }
-  body.a4lp-mode-archive { --a4lp-measure: 138mm; --a4lp-cover-measure: 146mm; }
+  body.a4lp-mode-reading { --a4lp-measure: 154mm; --a4lp-cover-measure: 162mm; }
+  body.a4lp-mode-archive { --a4lp-measure: 160mm; --a4lp-cover-measure: 168mm; }
   /* 强制浅色，避免站点 dark-mode 把背景印成深灰浪费墨 */
   :root, html, body {
     color-scheme: light !important;
@@ -78,11 +78,11 @@
   }
 
   /* 限制单图尺寸 ≤ 单页可用区，
-     A4 portrait 210×297mm，减 @page margin 18+20mm 横 / 15mm×2 纵 = 172×267mm。
-     再留 ~20mm 给 caption，故图本体高度上限 247mm。 */
+     A4 portrait 210×297mm，减 @page margin 12+13mm 横 / 11mm×2 纵 = 185×275mm。
+     再留 ~20mm 给 caption，故图本体高度上限 255mm。 */
   img, picture, svg, video, canvas {
-    max-width: 172mm !important;
-    max-height: 247mm !important;
+    max-width: 185mm !important;
+    max-height: 255mm !important;
     object-fit: contain;
     height: auto !important;
   }
@@ -108,6 +108,10 @@
   .a4lp-main {
     font-size: 12pt !important;
     line-height: 1.72 !important;
+  }
+  .a4lp-main > :first-child,
+  .a4lp-comments > :first-child {
+    margin-top: 0 !important;
   }
   .a4lp-main p,
   .a4lp-comments p {
@@ -210,7 +214,7 @@
   .a4lp-cover {
     page-break-after: always;
     break-after: page;
-    padding: 25mm 0 10mm;
+    padding: 16mm 0 7mm;
     display: block;
     max-width: var(--a4lp-cover-measure, 146mm) !important;
   }

@@ -314,11 +314,11 @@ async function pdfFlow(SITE_RULES, options = {}) {
         img?.getBoundingClientRect?.().width || 0,
         img?.clientWidth || 0
       );
-      const targetWidth = Math.min(1800, Math.max(700, Math.round(renderedWidth * 2.35)));
+      const targetWidth = Math.min(1500, Math.max(560, Math.round(renderedWidth * 1.85)));
       const sorted = [...candidates].sort((a, b) => a.width - b.width);
       return (sorted.find(c => c.width >= targetWidth) || sorted[sorted.length - 1]).url;
     }
-    const targetDensity = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    const targetDensity = 1.6;
     const sorted = [...candidates].sort((a, b) => a.density - b.density);
     return (sorted.find(c => c.density >= targetDensity) || sorted[sorted.length - 1]).url;
   };
@@ -371,20 +371,44 @@ async function pdfFlow(SITE_RULES, options = {}) {
     5000
   );
 
-  // 0c. 超大图做保守下采样，控制 PDF 体积；跨域或不可导出图片会自动跳过。
+  const estimateDataUrlBytes = (dataUrl) => {
+    const comma = dataUrl.indexOf(',');
+    const base64Len = comma >= 0 ? (dataUrl.length - comma - 1) : dataUrl.length;
+    return Math.ceil(base64Len * 0.75);
+  };
+  const getImageHint = (img, src) => [
+    src,
+    img.alt || '',
+    img.getAttribute('aria-label') || '',
+    img.className && typeof img.className === 'string' ? img.className : '',
+    img.closest('figure')?.className || '',
+    img.closest('picture')?.className || ''
+  ].join(' ').toLowerCase();
+  const isLikelyGraphicImage = (img, src) => {
+    const hint = getImageHint(img, src);
+    return /(logo|icon|avatar|chart|graph|table|diagram|infographic|map|equation|formula|qr|barcode|screenshot|code)/i.test(hint);
+  };
+  // 0c. 大图做更积极的重采样与重编码，优先压缩照片；跨域或不可导出图片会自动跳过。
   const compressHugeImage = (img) => {
     const src = img.currentSrc || img.src || '';
     if (!src || /^data:image\/svg\+xml/i.test(src)) return;
+    if (img.closest('.a4lp-source')) return;
     const pixels = (img.naturalWidth || 0) * (img.naturalHeight || 0);
     const renderedWidth = Math.max(img.getBoundingClientRect?.().width || 0, img.clientWidth || 0);
-    if (pixels < 6000000 && (img.naturalWidth || 0) < 2400) return;
-    if (!renderedWidth || renderedWidth >= (img.naturalWidth || 0) * 0.8) return;
+    const renderedHeight = Math.max(img.getBoundingClientRect?.().height || 0, img.clientHeight || 0);
+    if (!renderedWidth || renderedWidth < 220 || renderedHeight < 120) return;
+    const likelyGraphic = isLikelyGraphicImage(img, src);
+    if (likelyGraphic && pixels < 9000000) return;
+    if (pixels < 2600000 && (img.naturalWidth || 0) < 1800 && (img.naturalHeight || 0) < 1400) return;
+    const targetWidth = Math.min(1500, Math.max(900, Math.round(renderedWidth * 1.8)));
     const scale = Math.min(
       1,
-      1800 / Math.max(1, img.naturalWidth || 1),
-      Math.sqrt(5000000 / Math.max(1, pixels))
+      targetWidth / Math.max(1, img.naturalWidth || 1),
+      Math.sqrt(3200000 / Math.max(1, pixels))
     );
-    if (!Number.isFinite(scale) || scale >= 0.98) return;
+    if (!Number.isFinite(scale) || scale <= 0) return;
+    const shouldReencode = scale < 0.98 || pixels >= 3500000 || !likelyGraphic;
+    if (!shouldReencode) return;
     const width = Math.max(1, Math.round(img.naturalWidth * scale));
     const height = Math.max(1, Math.round(img.naturalHeight * scale));
     const canvas = document.createElement('canvas');
@@ -393,10 +417,22 @@ async function pdfFlow(SITE_RULES, options = {}) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     try {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const qualitySteps = likelyGraphic ? [0.86] : [0.78, 0.72, 0.66, 0.6];
+      const byteBudget = likelyGraphic
+        ? Math.min(1400000, Math.max(300000, Math.round(width * height * 0.42)))
+        : Math.min(900000, Math.max(220000, Math.round(width * height * 0.22)));
+      let dataUrl = '';
+      for (const quality of qualitySteps) {
+        const candidate = canvas.toDataURL('image/jpeg', quality);
+        if (!/^data:image\/jpeg;base64,/i.test(candidate)) continue;
+        dataUrl = candidate;
+        if (estimateDataUrlBytes(candidate) <= byteBudget) break;
+      }
       if (!/^data:image\/jpeg;base64,/i.test(dataUrl)) return;
       rememberAttr(img, 'src');
       if (img.hasAttribute('srcset')) rememberAttr(img, 'srcset');
@@ -761,6 +797,14 @@ async function pdfFlow(SITE_RULES, options = {}) {
   const dateStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
   const sourceHost = location.hostname.replace(/^www\./, '');
   const inlineSource = sourceHost + (location.pathname && location.pathname !== '/' ? location.pathname : '');
+  const filenameSuffix = layoutMode === 'archive' ? ' - archive' : ' - reading';
+  const basePrintTitle = (titleText || document.title || 'saved-webpage').replace(/\s+-\s+(reading|archive)$/i, '').trim();
+  const printTitle = basePrintTitle + filenameSuffix;
+  if (document.title !== printTitle) {
+    const prevTitle = document.title;
+    document.title = printTitle;
+    cleanupActions.push(() => { document.title = prevTitle; });
+  }
 
   const insertHost = document.createElement('div');
   insertHost.className = 'a4lp-source';
