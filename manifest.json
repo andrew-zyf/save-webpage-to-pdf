@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Save Webpage to PDF",
-  "version": "1.0.1",
-  "description": "一键将当前网页保存为竖向 A4 PDF：自动抽取标题/作者/正文，图片不跨页、说明与图同页。",
+  "name": "Save WSJ Webpage to PDF",
+  "version": "1.1.0",
+  "description": "一键将 WSJ 文章保存为竖向 A4 PDF：自动抽取标题/作者/正文，图片不跨页、说明与图同页。",
   "permissions": ["activeTab", "scripting", "contextMenus"],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Save Webpage to PDF"
+    "default_title": "Save WSJ Webpage to PDF"
   },
   "commands": {
     "save-pdf": {
@@ -14,7 +14,7 @@
         "default": "Alt+Shift+P",
         "mac": "Alt+Shift+P"
       },
-      "description": "保存当前网页为竖向 A4 PDF"
+      "description": "保存 WSJ 文章为竖向 A4 PDF"
     }
   },
   "background": { "service_worker": "background.js" },

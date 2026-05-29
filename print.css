@@ -7,10 +7,15 @@
 @media print {
   body.a4lp-print-root {
     font-family: Georgia, "Times New Roman", "Noto Serif CJK SC", "Songti SC", serif !important;
-    color: #161616 !important;
+    color: var(--a4lp-ink) !important;
     -webkit-font-smoothing: antialiased;
     --a4lp-measure: 158mm;
     --a4lp-cover-measure: 166mm;
+    --a4lp-ink: #141414;
+    --a4lp-muted: #66615a;
+    --a4lp-rule: #d8d1c3;
+    --a4lp-paper: #f7f5ef;
+    --a4lp-accent: #8f6f3a;
     --a4lp-font-body: 11.5pt;
     --a4lp-line-body: 1.62;
     --a4lp-font-caption: 9.75pt;
@@ -46,6 +51,10 @@
   }
   /* 长 URL / 长 token 在窄列内换行而不是被裁掉 */
   a, code { word-break: break-word; overflow-wrap: anywhere; }
+  a {
+    text-decoration-thickness: 0.06em !important;
+    text-underline-offset: 0.14em !important;
+  }
   /* 代码块自动换行，避免横向溢出后右侧整段消失 */
   pre, pre code {
     white-space: pre-wrap !important;
@@ -347,6 +356,8 @@
   .a4lp-main p,
   .a4lp-comments p {
     margin: 0 0 0.95em !important;
+    text-align: justify !important;
+    hyphens: auto !important;
   }
   /* Economist 跨页撕裂的修复改走 flow.js 的 iframe 沙箱路径（IFRAME_CSS）。
      这里不再需要任何 Economist 专属规则；如果 iframe 路径出错回退原路径，
@@ -399,6 +410,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "PingFang SC", "Noto Sans CJK SC", sans-serif !important;
     line-height: 1.3 !important;
     color: #101010 !important;
+    text-wrap: balance;
   }
   .a4lp-main h2,
   .a4lp-comments h2 {
@@ -417,11 +429,12 @@
   }
   .a4lp-main blockquote,
   .a4lp-comments blockquote {
-    margin: 1.1em 0 1.1em 0 !important;
-    padding: 0.15em 0 0.15em 1em !important;
-    border-left: 3px solid #cfcfcf !important;
+    margin: 1.2em 0 1.25em 0 !important;
+    padding: 0.7em 1em 0.72em 1.15em !important;
+    border-left: 3px solid var(--a4lp-accent) !important;
+    background: var(--a4lp-paper) !important;
     color: #333 !important;
-    font-style: italic;
+    font-style: normal !important;
   }
   .a4lp-main figcaption,
   .a4lp-comments figcaption,
@@ -429,8 +442,11 @@
   .a4lp-comments .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas) {
     font-size: var(--a4lp-font-caption) !important;
     line-height: 1.5 !important;
-    color: #555 !important;
+    color: var(--a4lp-muted) !important;
     margin-top: 0.4em !important;
+    max-width: 92% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
   .a4lp-main table,
   .a4lp-comments table {
@@ -438,12 +454,18 @@
     border-collapse: collapse !important;
     font-size: var(--a4lp-font-caption) !important;
     margin: 1em 0 !important;
+    font-variant-numeric: tabular-nums !important;
   }
   .a4lp-main th, .a4lp-main td,
   .a4lp-comments th, .a4lp-comments td {
-    border: 1px solid #ddd !important;
+    border: 1px solid var(--a4lp-rule) !important;
     padding: 6px 8px !important;
     vertical-align: top !important;
+  }
+  .a4lp-main th,
+  .a4lp-comments th {
+    background: var(--a4lp-paper) !important;
+    font-weight: 700 !important;
   }
   .a4lp-comments-start {
     break-before: page !important;
@@ -470,16 +492,17 @@
   .a4lp-cover {
     page-break-after: always !important;
     break-after: page !important;
-    padding: 14mm 0 7mm;
+    padding: 11mm 0 7mm;
     display: block;
     max-width: var(--a4lp-cover-measure, 146mm) !important;
+    border-top: 2px solid var(--a4lp-accent);
   }
   .a4lp-cover-kicker {
     font-size: var(--a4lp-font-meta);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: #888;
-    margin-bottom: 14mm;
+    color: var(--a4lp-muted);
+    margin-bottom: 12mm;
   }
   .a4lp-cover-title {
     font-size: var(--a4lp-font-cover-title) !important;
@@ -489,19 +512,20 @@
     margin: 0 0 9mm !important;
     border: 0 !important;
     padding: 0 !important;
+    text-wrap: balance;
   }
   .a4lp-cover-by {
     font-size: 10.5pt;
-    color: #444;
+    color: var(--a4lp-muted);
     margin-bottom: 8mm;
     letter-spacing: 0.04em;
   }
   .a4lp-cover-source {
     margin-top: 10mm;
     padding-top: 5mm;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid var(--a4lp-rule);
     font-size: var(--a4lp-font-meta);
-    color: #666;
+    color: var(--a4lp-muted);
   }
   /* 封面 hero 图：居中、完整显示，避免挤压标题和来源信息。 */
   .a4lp-cover-hero {
@@ -521,7 +545,7 @@
     margin: 3mm auto 0 !important;
     font-size: 9pt !important;
     line-height: 1.45 !important;
-    color: #555 !important;
+    color: var(--a4lp-muted) !important;
     text-align: center !important;
     font-style: italic !important;
     max-width: 92% !important;
@@ -543,11 +567,11 @@
   }
 
   .a4lp-authors {
-    border: 1px solid #ddd;
-    border-left: 3px solid #888;
+    border: 1px solid var(--a4lp-rule);
+    border-left: 3px solid var(--a4lp-accent);
     padding: 8px 12px;
     margin: 8px 0 14px;
-    background: #fafafa !important;
+    background: var(--a4lp-paper) !important;
     page-break-inside: avoid;
     break-inside: avoid;
   }
@@ -556,7 +580,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #666;
+    color: var(--a4lp-muted);
     margin: 0 0 6px;
   }
   .a4lp-author {
@@ -564,14 +588,14 @@
     page-break-inside: avoid;
     break-inside: avoid;
   }
-  .a4lp-author + .a4lp-author { border-top: 1px dotted #ccc; padding-top: 6px; }
+  .a4lp-author + .a4lp-author { border-top: 1px dotted var(--a4lp-rule); padding-top: 6px; }
   .a4lp-author-name { font-weight: 700; font-size: 10pt; color: #111; }
-  .a4lp-author-role { color: #666; font-style: italic; font-size: var(--a4lp-font-meta); }
+  .a4lp-author-role { color: var(--a4lp-muted); font-style: italic; font-size: var(--a4lp-font-meta); }
   .a4lp-author-bio  { margin-top: 3px; color: #333; font-size: var(--a4lp-font-meta); line-height: 1.5; }
 
   .a4lp-toc {
-    border-top: 1px solid #bbb;
-    border-bottom: 1px solid #bbb;
+    border-top: 1px solid var(--a4lp-rule);
+    border-bottom: 1px solid var(--a4lp-rule);
     padding: 8px 0 10px;
     margin: 14mm 0 0;
     page-break-inside: avoid;

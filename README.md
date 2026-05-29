@@ -1,34 +1,29 @@
-# Save Webpage to PDF
+# Save WSJ Webpage to PDF
 
-> Chrome 扩展（MV3）。一键把当前文章页保存为竖向 A4 PDF：自动抽取标题 / 作者 / 正文，生成带封面、目录、作者卡的归档版本。针对长文阅读做了排版优化——衬线字体、合理列宽、图片不跨页、超大图自动下采样。
+> Chrome 扩展（MV3）。一键把 WSJ 文章页保存为竖向 A4 PDF：自动抽取标题 / 作者 / 正文，生成带封面、作者卡的归档版本。针对长文阅读做了排版优化——衬线字体、合理列宽、图片不跨页、超大图自动下采样。
 
-[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-preview-1a73e8?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe/preview?hl=zh-CN&authuser=0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Privacy](https://img.shields.io/badge/Privacy-no_data_collected-success)](PRIVACY.md)
-[![Changelog](https://img.shields.io/badge/Changelog-v1.0.1-blue)](CHANGELOG.md)
+[![Changelog](https://img.shields.io/badge/Changelog-v1.1.0-blue)](CHANGELOG.md)
 
-内置规则覆盖 **Carnegie · CNN · CSIS · The Economist · Foreign Affairs · The New Yorker · WSJ**；其他站点走通用 fallback 路径，多数文章页也能识别。
+专为 **WSJ** 优化；其他站点走通用 fallback 路径。
 
 ## 安装
 
-**方式一（推荐，但目前是预览版）**：扩展已提交 [Chrome Web Store](https://chromewebstore.google.com/detail/fcilaglhmmpjaifkhedeihdbhaooohfe/preview?hl=zh-CN&authuser=0)，**仍在 Google 审核中**。审核通过前，链接打开是预览页（只能登录 Google 开发者后台才能看到），还无法点「添加到 Chrome」公开安装。审核通过后会自动转成正式商店页。在此之前请走方式二。
-
-**方式二（开发者模式 / 自行加载）**：
-
 1. **获取仓库**——任选其一：
-   - `git clone https://github.com/andrew-zyf/save-webpage-to-pdf.git`
+   - `git clone https://github.com/andrew-zyf/save-wsj-webpage-to-pdf.git`
    - 或在 GitHub 页面点 `Code → Download ZIP`，解压到本地任意目录
 2. **加载到 Chrome**：打开 `chrome://extensions`，右上角开「开发者模式」，点「加载已解压的扩展程序」，选刚才克隆/解压出来的仓库根目录
 3. 工具栏出现蓝色图标即装好
 
-> `examples/` 仅是样张 PDF（约 30 MB），不参与扩展运行；嫌占空间可以直接删除该文件夹。
+> `examples/` 仅是样张 PDF，不参与扩展运行；嫌占空间可以直接删除该文件夹。
 
 ## 使用
 
 任选其一触发：
 
-- 工具栏图标 → 「保存为竖向 A4 PDF」
-- 页面右键 → `Save Webpage to PDF`
+- 工具栏图标 → 「保存当前页面」
+- 页面右键 → `Save WSJ Webpage to PDF`
 - 快捷键 `Shift + Option + P`（macOS）/ `Shift + Alt + P`（Win/Linux），可在 `chrome://extensions/shortcuts` 改键
 
 ## 样张
@@ -37,32 +32,26 @@
 
 | 站点 | 样张 PDF | 原文 |
 | --- | --- | --- |
-| Carnegie | [The AI Labor Debate](examples/Carnegie%20-%20The%20AI%20Labor%20Debate_%20Three%20Views%20on%20the%20Future%20of%20Work%20_%20Carnegie%20Endowment%20for%20International%20Peace.pdf) | [↗](https://carnegieendowment.org/research/2026/04/the-ai-labor-debate-three-views-on-the-future-of-work) |
-| CNN | [Mali insurgents hit military bases](examples/CNN%20-%20Mali%20insurgents%20hit%20military%20bases%20in%20%E2%80%98complex%20attacks%E2%80%99%20claimed%20by%20al%20Qaeda-linked%20militants.pdf) | [↗](https://edition.cnn.com/2026/04/25/africa/mali-bamako-gunmen-attacks-intl) |
-| CSIS | [How to Interpret Wartime Oil Prices](examples/CSIS%20-%20How%20to%20Interpret%20Wartime%20Oil%20Prices.pdf) | [↗](https://www.csis.org/analysis/how-interpret-wartime-oil-prices) |
-| Foreign Affairs | [The Tech High Ground](examples/Foreign%20Affairs%20-%20The%20Tech%20High%20Ground.pdf) | [↗](https://www.foreignaffairs.com/united-states/tech-high-ground-jake-sullivan) |
-| New Yorker | [J. D. Vance's Bumpy Ride](examples/New%20Yorker%20-%20J.%20D.%20Vance%E2%80%99s%20Bumpy%20Ride.pdf) | [↗](https://www.newyorker.com/magazine/2026/04/27/j-d-vances-bumpy-ride) |
-| The Economist | [The rhetoric of war has changed](examples/The%20Economist%20-%20The%20rhetoric%20of%20war%20has%20changed.%20Not%20for%20the%20better.pdf) | [↗](https://www.economist.com/culture/2026/04/23/the-rhetoric-of-war-has-changed-not-for-the-better) |
 | WSJ | [United's Card-Counting CEO](examples/WSJ%20-%20United%E2%80%99s%20Card-Counting%20CEO%20Made%20a%20Huge%20Bet%E2%80%94and%20It%E2%80%99s%20Paying%20Off.pdf) | [↗](https://www.wsj.com/business/airlines/united-airlines-ceo-scott-kirby-delta-american-11621d97) |
 
 ## 工作原理
 
-**抽取 → 标记 → 打印**：`flow.js` 抽出标题 / 作者 / 正文，标记非正文节点不跨页，注入封面 / 目录 / 作者卡后触发打印。详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+**抽取 → 标记 → 打印**：`flow.js` 抽出标题 / 作者 / 正文，标记非正文节点不跨页，注入封面 / 作者卡后触发打印。详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
 ## 文件结构
 
 ```text
-save-webpage-to-pdf/
+save-wsj-webpage-to-pdf/
 ├── manifest.json                MV3 清单（权限 + 命令 + service worker）
-├── popup.html                   弹窗 UI（单按钮 + 快捷键提示）
+├── popup.html                   弹窗 UI（单按钮）
 ├── popup.js                     popup 触发：注入 print.css + flow.js
 ├── background.js                service worker：右键菜单 + 快捷键 → flow.js
-├── flow.js                      抽取 + 标记 + 打印；含 SITE_RULES、IFRAME_CSS、printViaIframe
-├── print.css                    @page + 防跨页 + 站点 scope 覆盖（原打印路径）
+├── flow.js                      抽取 + 标记 + 打印；含 WSJ 站点规则
+├── print.css                    @page + 防跨页 + 排版覆盖
 ├── icons/                       icon16/48/128.png
-├── examples/                    7 个内置站的样张 PDF
+├── examples/                    WSJ 样张 PDF
 ├── docs/
-│   └── ARCHITECTURE.md          工作原理 + 加站点 + 全站默认 + 已知限制
+│   └── ARCHITECTURE.md          工作原理 + 已知限制
 ├── CHANGELOG.md
 ├── PRIVACY.md
 ├── LICENSE
