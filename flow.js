@@ -61,6 +61,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const withTimeout = (p, ms) => Promise.race([p, sleep(ms)]);
   const cleanupActions = [];
+  const PRINT_CLEANUP_FALLBACK_MS = 120000;
   const layoutMode = 'archive';
   // 处理上一次打印异常留下的注入节点，避免封面/目录重复叠加。
   document.querySelectorAll('.a4lp-source').forEach(el => el.remove());
@@ -70,7 +71,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     el.classList.remove('a4lp-svg-icon', 'a4lp-svg-graphic');
   });
   document.documentElement.classList.remove('a4lp-print-root');
-  document.body.classList.remove('a4lp-print-root', 'a4lp-mode-archive');
+  document.body.classList.remove('a4lp-print-root', 'a4lp-mode-archive', 'a4lp-reconstructed');
   Array.from(document.body.classList).forEach(cls => {
     if (cls.startsWith('a4lp-site-')) document.body.classList.remove(cls);
   });
@@ -169,7 +170,8 @@ async function pdfFlow(SITE_RULES, options = {}) {
   const SUPPORTED_PICTURE_TYPES = new Set([
     'image/avif', 'image/webp', 'image/png', 'image/jpeg', 'image/gif', 'image/svg+xml'
   ]);
-  const DATA_PLACEHOLDER_RE = /^data:image\/(?:gif|svg\+xml)/i;
+  const DATA_PLACEHOLDER_RE = /^data:image\/gif/i;
+  const DATA_SVG_IMAGE_RE = /^data:image\/svg\+xml/i;
   const PLACEHOLDER_IMAGE_RE = /(placeholder|pixel|tracker|spacer|blank|fallback|default[-_]?image|generic[-_]?image|transparent)/i;
   const DECORATIVE_IMAGE_RE = /(logo|icon|avatar|sprite|brand[-_]?image)/i;
   const GRAPHIC_IMAGE_RE = /(chart|graph|table|diagram|infographic|map|equation|formula|qr|barcode|screenshot|code)/i;
@@ -187,9 +189,11 @@ async function pdfFlow(SITE_RULES, options = {}) {
   const isLikelyPlaceholderImage = (img, src = '') => {
     const current = src || img?.currentSrc || img?.src || '';
     const hint = getImageHint(img, current);
-    if (DATA_PLACEHOLDER_RE.test(current) && !GRAPHIC_IMAGE_RE.test(hint)) return true;
     const w = img?.naturalWidth || parseFloat(img?.getAttribute?.('width') || '0') || 0;
     const h = img?.naturalHeight || parseFloat(img?.getAttribute?.('height') || '0') || 0;
+    if (DATA_PLACEHOLDER_RE.test(current) && !GRAPHIC_IMAGE_RE.test(hint)) return true;
+    if (DATA_SVG_IMAGE_RE.test(current) && !GRAPHIC_IMAGE_RE.test(hint) && w > 0 && h > 0 && w <= 2 && h <= 2) return true;
+    if (w > 0 && h > 0 && w <= 2 && h <= 2 && !GRAPHIC_IMAGE_RE.test(hint)) return true;
     return PLACEHOLDER_IMAGE_RE.test(hint);
   };
   const absolutizeImageUrl = (value) => {
@@ -601,7 +605,8 @@ async function pdfFlow(SITE_RULES, options = {}) {
     if (/^(related content|recommended reading|see also|recirculation|recommendation|read next|what to read next|more to read)$/i.test(text)) return true;
     if (/^(explore more|from the .* edition|discover stories from this section|more from [a-z].*|plot twist newsletter\b|this article appeared in the .* print edition|more work from carnegie endowment for international peace|acknowledgments|about the author|notes|more by\b|[^A-Za-z0-9]{0,3}\s*listen(?:\s*[•·|]\s*\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?))?)$/i.test(text)) return true;
     if (/^carnegie does not take institutional positions on public policy issues/i.test(text)) return true;
-    if (isWSJ && /^(write to\s|wsj\s*\|\s*buy side|reviews and recommendations|real estate insights|content provided by|alison sider writes about|ben cohen writes the|for non-personal use or to order multiple copies)/i.test(text)) return true;
+    if (isWSJ && /^(up next|videos|continue to article|click for sound|show conversation|write to\s|wsj\s*\|\s*buy side|reviews and recommendations|real estate insights|content provided by|alison sider writes about|ben cohen writes the|for non-personal use or to order multiple copies|copyright\s+©?\s*\d{4}\s+dow jones|©?\s*\d{4}\s+dow jones)/i.test(text)) return true;
+    if (isWSJ && /^[a-f0-9]{24,}$/i.test(text)) return true;
     return false;
   };
   // 把 safeKeep 节点先打标记，避免后续 keep-path 把它们误伤
@@ -1035,6 +1040,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
         while (cur && cur !== document.documentElement) { onPath.add(cur); cur = cur.parentElement; }
       });
       onPath.forEach(node => {
+        if (mainEl && node !== mainEl && mainEl.contains(node)) return;
         const parent = node.parentElement;
         if (!parent) return;
         for (const sib of parent.children) {
@@ -1086,6 +1092,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   let coverHeroSrc = '';
   let coverHeroEl = null;
   const HERO_REJECT_RE = new RegExp(DECORATIVE_IMAGE_RE.source + '|' + PLACEHOLDER_IMAGE_RE.source, 'i');
+  const WSJ_HERO_REJECT_RE = /\b(?:buy\s*side|reviews?\s+and\s+recommendations?|shopping|shop|product|products|deals?|coupons?|best\s+\w+\s+to\s+buy|polo\s+shirts?|real\s+estate\s+insights)\b/i;
   const HERO_GRAPHIC_RE = /\b(?:fig(?:ure)?|table|chart|graph|exhibit)\s*\.?\s*\d+\b|survey|respondents|percentage|percent|magnitude and direction|workforce impact|perspectives on ai/i;  const getMetaHeroSrc = () => {
     const selectors = [
       'meta[property="og:image:secure_url"]',
@@ -1101,6 +1108,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
       const url = absolutizeImageUrl(raw);
       if (!url) continue;
       if (HERO_REJECT_RE.test(url.toLowerCase())) continue;
+      if (isWSJ && WSJ_HERO_REJECT_RE.test(url.toLowerCase())) continue;
       return url;
     }
     return '';
@@ -1119,14 +1127,22 @@ async function pdfFlow(SITE_RULES, options = {}) {
   };
   const metaHeroSrc = getMetaHeroSrc();
   const heroSearchScope = (mainEl?.closest('article')) || document.querySelector('article, main') || mainEl;
+  const isSupplementalImageCandidate = (img) => {
+    if (!img) return false;
+    if (isSupplementalNode(img)) return true;
+    const wrap = img.closest('figure, picture, [role="figure"], section, aside, div');
+    return !!(wrap && wrap !== mainEl && isSupplementalNode(wrap));
+  };
   if (!coverHeroSrc && heroSearchScope) {
     const heroCandidates = Array.from(heroSearchScope.querySelectorAll('img')).map(img => {
       if (img.closest('.a4lp-hide')) return false;
+      if (isWSJ && isSupplementalImageCandidate(img)) return false;
       if (isLikelyPlaceholderImage(img)) return false;
       const src = getBestImageUrl(img);
-      if (!src || /^data:image\/(?:gif|svg\+xml);/i.test(src)) return false;
+      if (!src || /^data:image\/gif[;,]/i.test(src)) return false;
       const hint = getHeroHint(img, src);
       if (HERO_REJECT_RE.test(hint)) return false;
+      if (isWSJ && WSJ_HERO_REJECT_RE.test(hint)) return false;
       if (GRAPHIC_IMAGE_RE.test(hint) || HERO_GRAPHIC_RE.test(hint)) return false;
       const width = img.naturalWidth || parseFloat(img.getAttribute('width') || '0') || img.getBoundingClientRect().width || 0;
       const height = img.naturalHeight || parseFloat(img.getAttribute('height') || '0') || img.getBoundingClientRect().height || 0;
@@ -1348,6 +1364,115 @@ async function pdfFlow(SITE_RULES, options = {}) {
     rememberClass(svg, graphic ? 'a4lp-svg-graphic' : 'a4lp-svg-icon');
   });
 
+  const buildReconstructedMain = (sourceEl) => {
+    if (!sourceEl || sourceEl === document.body || sourceEl === document.documentElement) return null;
+    const clone = sourceEl.cloneNode(true);
+    const MEDIA_TAGS = new Set(['IMG', 'PICTURE', 'FIGURE', 'SVG', 'VIDEO', 'CANVAS', 'TABLE']);
+    const ORPHAN_WIDGET_TEXT_RE = /^(?:Aa|\d{1,3})$/;
+    const dropSelector = [
+      'script', 'style', 'noscript', 'iframe', 'form',
+      'input', 'button', 'select', 'textarea', 'option',
+      'source', 'template', '[hidden]'
+    ].join(',');
+    const wsjAuthorNameTokens = isWSJ && authorText
+      ? authorText.split(/\s+(?:and|&)\s+|,\s*/i).map(name => normalizeText(name).toLowerCase()).filter(Boolean)
+      : [];
+    const isBeforeLeadBody = (el) => {
+      if (!leadBodyP || !el || el === sourceEl || el.contains(leadBodyP)) return false;
+      return !!(el.compareDocumentPosition(leadBodyP) & Node.DOCUMENT_POSITION_FOLLOWING);
+    };
+    const isWSJLeadMatterNode = (el) => {
+      if (!isWSJ || !isBeforeLeadBody(el)) return false;
+      const marker = getNodeMarker(el);
+      if (/(^|\b)(byline|author|timestamp|date|article-info)(\b|$)/i.test(marker)) return true;
+      if (el.querySelector('img, picture, figure, svg, video, canvas, table')) return false;
+      const text = normalizeText(el.innerText || el.textContent || '');
+      if (!text || text.length > 240) return false;
+      if (/^(by|and)$/i.test(text)) return true;
+      if (/^(published|updated|last updated)\b/i.test(text)) return true;
+      if (/^(jan\.?|feb\.?|mar\.?|apr\.?|may|jun\.?|jul\.?|aug\.?|sep\.?|sept\.?|oct\.?|nov\.?|dec\.?)\s+\d{1,2},\s+\d{4}/i.test(text)) return true;
+      if (authorText) {
+        const comparableText = text.toLowerCase().replace(/^by\s+/, '').replace(/\s+/g, ' ').trim();
+        const comparableAuthor = authorText.toLowerCase().replace(/\s+/g, ' ').trim();
+        if (comparableText === comparableAuthor) return true;
+        if (wsjAuthorNameTokens.includes(comparableText)) return true;
+      }
+      return false;
+    };
+    const copyCleanAttrs = (from, to) => {
+      const tag = to.tagName;
+      const keep = [];
+      if (tag === 'A') {
+        const href = from.getAttribute('href');
+        if (href) keep.push(['href', href]);
+      } else if (tag === 'IMG') {
+        const src = getBestImageUrl(from) || from.currentSrc || from.src || from.getAttribute('src') || '';
+        if (src) keep.push(['src', src]);
+        const alt = from.getAttribute('alt');
+        if (alt) keep.push(['alt', alt]);
+        keep.push(['loading', 'eager'], ['decoding', 'sync']);
+      } else if (tag === 'TD' || tag === 'TH') {
+        ['colspan', 'rowspan'].forEach(name => {
+          const value = from.getAttribute(name);
+          if (value) keep.push([name, value]);
+        });
+      } else if (tag === 'OL') {
+        const start = from.getAttribute('start');
+        if (start) keep.push(['start', start]);
+      } else if (tag === 'LI') {
+        const value = from.getAttribute('value');
+        if (value) keep.push(['value', value]);
+      }
+      Array.from(to.attributes).forEach(attr => to.removeAttribute(attr.name));
+      keep.forEach(([name, value]) => to.setAttribute(name, value));
+    };
+    const cleanPair = (from, to) => {
+      if (!from || !to || to.nodeType !== 1) return;
+      if (from.classList?.contains('a4lp-hide') || from.closest?.('.a4lp-hide') || isSupplementalNode(from) || isWSJLeadMatterNode(from) || to.matches(dropSelector)) {
+        to.remove();
+        return;
+      }
+      if (from.classList?.contains('a4lp-svg-icon')) {
+        to.remove();
+        return;
+      }
+      const fromChildren = Array.from(from.children);
+      const toChildren = Array.from(to.children);
+      toChildren.forEach((child, index) => cleanPair(fromChildren[index], child));
+      if (!to.parentNode && to !== clone) return;
+      if (to.closest('svg')) {
+        to.removeAttribute('class');
+        to.removeAttribute('style');
+        return;
+      }
+      copyCleanAttrs(from, to);
+    };
+    cleanPair(sourceEl, clone);
+    if (!clone.isConnected && clone.parentNode === null && sourceEl.classList?.contains('a4lp-hide')) return null;
+    clone.className = 'a4lp-main a4lp-reconstructed-main';
+    clone.removeAttribute('style');
+    clone.querySelectorAll('div, section, span').forEach(el => {
+      const text = normalizeText(el.innerText || el.textContent || '');
+      const hasMedia = Array.from(el.children).some(child => MEDIA_TAGS.has(child.tagName)) ||
+        !!el.querySelector('img, picture, figure, svg, video, canvas, table');
+      if (!text && !hasMedia) el.remove();
+    });
+    clone.querySelectorAll('a, div, span').forEach(el => {
+      const text = normalizeText(el.innerText || el.textContent || '');
+      const hasMedia = Array.from(el.children).some(child => MEDIA_TAGS.has(child.tagName)) ||
+        !!el.querySelector('img, picture, figure, svg, video, canvas, table');
+      if (!hasMedia && ORPHAN_WIDGET_TEXT_RE.test(text)) el.remove();
+    });
+    const reconstructedText = normalizeText(clone.innerText || clone.textContent || '');
+    return reconstructedText.length >= 200 ? clone : null;
+  };
+
+  const reconstructedMain = isWSJ ? buildReconstructedMain(mainEl) : null;
+  if (reconstructedMain) {
+    rememberClass(document.body, 'a4lp-reconstructed');
+    insertHost.appendChild(reconstructedMain);
+  }
+
   // 9. 清理标记与临时 DOM 变更
   let cleaned = false;
   const cleanup = () => {
@@ -1371,10 +1496,22 @@ async function pdfFlow(SITE_RULES, options = {}) {
   if (coverImg) {
     try { await withTimeout(coverImg.decode(), 2000); } catch {}
   }
+  const printImgs = Array.from(insertHost.querySelectorAll('img'));
+  await withTimeout(
+    Promise.all(printImgs.map(img => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      if (img.decode) return img.decode().catch(() => {});
+      return new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    })),
+    8000
+  );
   await sleep(300);
     window.addEventListener('afterprint', cleanup, { once: true });
   window.print();
-  setTimeout(cleanup, 0);
+  setTimeout(cleanup, PRINT_CLEANUP_FALLBACK_MS);
 
 // ---- 内嵌 helper ----
   function pickContent(SITE_RULES) {

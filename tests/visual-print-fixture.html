@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Print Layout Fixture</title>
+  <link rel="stylesheet" href="../print.css">
+  <style>
+    body {
+      margin: 24px auto;
+      max-width: 760px;
+      font: 16px/1.55 Georgia, "Times New Roman", serif;
+      color: #141414;
+    }
+    .screen-note {
+      margin-bottom: 24px;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      font: 13px/1.4 -apple-system, system-ui, sans-serif;
+      color: #555;
+    }
+    @media print {
+      .screen-note { display: none; }
+    }
+  </style>
+</head>
+<body class="a4lp-print-root a4lp-mode-archive">
+  <div class="screen-note">Local fixture for checking Chrome print preview layout.</div>
+
+  <div class="a4lp-source">
+    <section class="a4lp-cover a4lp-cover--archive">
+      <div class="a4lp-cover-kicker">SAVED WEBPAGE · 2026-05-29</div>
+      <h1 class="a4lp-cover-title">The Long Shape of a Saved Article</h1>
+      <div class="a4lp-cover-by">BY Codex Layout Review</div>
+      <div class="a4lp-authors">
+        <div class="a4lp-authors-h">作者介绍 / Authors</div>
+        <div class="a4lp-author">
+          <span class="a4lp-author-name">Codex Layout Review</span>
+          <span class="a4lp-author-role"> — Print Design QA</span>
+          <div class="a4lp-author-bio">A compact author card tests the new paper tint, accent rule, and small-text rhythm on the cover page.</div>
+        </div>
+      </div>
+      <div class="a4lp-cover-hero">
+        <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='620' viewBox='0 0 1200 620'%3E%3Crect width='1200' height='620' fill='%23ece7dd'/%3E%3Crect x='92' y='86' width='1016' height='448' fill='%23f8f6ef' stroke='%238f6f3a' stroke-width='8'/%3E%3Cpath d='M170 430 C320 260 430 360 540 250 S820 230 1010 410' fill='none' stroke='%23141414' stroke-width='14' stroke-linecap='round'/%3E%3Ccircle cx='295' cy='205' r='48' fill='%238f6f3a'/%3E%3C/svg%3E">
+        <div class="a4lp-cover-hero-caption">A neutral hero image checks cover spacing, image containment, and muted caption color.</div>
+      </div>
+      <div class="a4lp-cover-source"><span>SOURCE</span><a class="a4lp-cover-url" href="https://example.com/very/long/source/url/that/wraps/across/multiple/lines">https://example.com/very/long/source/url/that/wraps/across/multiple/lines</a></div>
+    </section>
+  </div>
+
+  <main class="a4lp-main">
+    <h2>Opening Section</h2>
+    <p>Saved articles need to feel calm on paper. This paragraph is intentionally long enough to show two-sided alignment, hyphenation, line rhythm, and the way links sit inside normal prose without shouting at the reader.</p>
+    <p>The goal is not decoration. The page should have a quiet archive quality: readable text, restrained metadata, and enough contrast that quotes, captions, and tables can be scanned without breaking the flow.</p>
+
+    <blockquote>
+      <p>A blockquote should feel like a considered aside, not a loud interruption. The paper tint and accent rule give it shape while keeping the tone restrained.</p>
+    </blockquote>
+
+    <figure>
+      <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='420' viewBox='0 0 900 420'%3E%3Crect width='900' height='420' fill='%23f7f5ef'/%3E%3Crect x='70' y='70' width='760' height='260' fill='white' stroke='%23d8d1c3' stroke-width='4'/%3E%3Cpath d='M120 280 L250 190 L380 235 L530 140 L760 250' fill='none' stroke='%238f6f3a' stroke-width='12' stroke-linecap='round'/%3E%3C/svg%3E">
+      <figcaption>A centered figure caption checks the new max-width and muted tone under regular body images.</figcaption>
+    </figure>
+
+    <h2>Numbers and Tables</h2>
+    <p>Tables are common in technical and financial articles, so the printed result should make numeric columns stable and headers easy to distinguish.</p>
+    <table>
+      <thead>
+        <tr><th>Metric</th><th>Before</th><th>After</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Cover spacing</td><td>Loose</td><td>Balanced</td></tr>
+        <tr><td>Quote treatment</td><td>Plain rule</td><td>Paper tint</td></tr>
+        <tr><td>Numeric rhythm</td><td>12,345.67</td><td>98,765.43</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

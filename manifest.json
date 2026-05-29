@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Save WSJ Webpage to PDF",
-  "version": "1.1.0",
-  "description": "一键将 WSJ 文章保存为竖向 A4 PDF：自动抽取标题/作者/正文，图片不跨页、说明与图同页。",
+  "version": "1.1.1",
+  "description": "一键将 WSJ 文章重构为竖向 A4 PDF：自动抽取标题/作者/正文，清理网页控件与推荐流。",
   "permissions": ["activeTab", "scripting", "contextMenus"],
   "action": {
     "default_popup": "popup.html",

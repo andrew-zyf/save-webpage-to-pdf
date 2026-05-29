@@ -49,6 +49,29 @@
     float: none !important;
     clear: both !important;
   }
+  body.a4lp-print-root.a4lp-reconstructed > :not(.a4lp-source) {
+    display: none !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed > .a4lp-source {
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main *:not(code):not(code *):not(pre):not(pre *):not(svg):not(svg *) {
+    font-family: Georgia, "Times New Roman", "Noto Serif CJK SC", "Songti SC", serif !important;
+    font-synthesis: none !important;
+    font-feature-settings: normal !important;
+    font-variant-ligatures: none !important;
+    text-rendering: geometricPrecision !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main {
+    display: block !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
+  }
   /* 长 URL / 长 token 在窄列内换行而不是被裁掉 */
   a, code { word-break: break-word; overflow-wrap: anywhere; }
   a {
@@ -345,6 +368,46 @@
     object-fit: contain !important;
     object-position: center center !important;
   }
+  /* WSJ 重构正文：图片按正文栏宽排，避免单张图按整页高度撑开；
+     caption 收紧到图下方，保持图文作为一个阅读单元。 */
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main figure,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main .a4lp-keep {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 5mm auto 6mm !important;
+    padding: 0 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main figure img,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main figure picture,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main .a4lp-keep > img,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main .a4lp-keep > picture,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main .a4lp-keep picture img {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 118mm !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main figcaption,
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main figure [class*="caption" i],
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main figure [class*="credit" i],
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-reconstructed-main .a4lp-keep > :not(img):not(picture):not(svg):not(video):not(canvas) {
+    display: block !important;
+    max-width: 100% !important;
+    margin: 1.5mm auto 0 !important;
+    font-size: var(--a4lp-font-caption) !important;
+    line-height: 1.35 !important;
+    color: var(--a4lp-muted) !important;
+    text-align: left !important;
+    font-style: normal !important;
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+  }
   .a4lp-main {
     font-size: var(--a4lp-font-body) !important;
     line-height: var(--a4lp-line-body) !important;
@@ -549,6 +612,30 @@
     text-align: center !important;
     font-style: italic !important;
     max-width: 92% !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-cover-hero .a4lp-keep {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-cover-hero .a4lp-keep > img {
+    display: block !important;
+    max-width: 100% !important;
+    max-height: 95mm !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    object-fit: contain !important;
+    object-position: center center !important;
+  }
+  body.a4lp-print-root.a4lp-reconstructed .a4lp-cover-hero .a4lp-keep > .a4lp-cover-hero-caption {
+    margin: 3mm auto 0 !important;
+    max-width: 92% !important;
+    text-align: center !important;
   }
   .a4lp-cover-source span {
     letter-spacing: 0.2em;
