@@ -297,7 +297,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     if (img.hasAttribute('srcset')) img.setAttribute('srcset', bestUrl);
   });
 
-  // 0b'. 兜底懒加载占位：很多站点（Economist / NYT / FT / CNN 等）只在
+  // 0b'. 兜底懒加载占位：部分站点只在
   // data-src / data-srcset / data-original / data-hi-res-src 上挂真实 URL，
   // 等 IO 触发才 swap。无条件把 data-* 上能找到的真实 URL 回填到 src/srcset
   // —— 即使现有 src 看起来正常，我们也宁愿强制刷新以保证打印之前请求已发出。
@@ -827,7 +827,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   };
   const hideLeadMatches = (patterns) => {
     if (!patterns.length || !Number.isFinite(leadBodyTop)) return;
-    // 同时扫 mainEl 与 titleEl 的 header/article 祖先 —— CNN/NY 的 UPDATED /
+    // 同时扫 mainEl 与 titleEl 的 header/article 祖先 ——
     // Story by / Listen 等元信息常挂在文章 header 而不是正文容器里。
     const scopes = new Set();
     if (mainEl) scopes.add(mainEl);
@@ -886,7 +886,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   if (FRONT_MATTER_TEXT.length) hideLeadMatches(FRONT_MATTER_TEXT);
   if (TAIL_START_TEXT.length) stripFromMarker(TAIL_START_TEXT);
 
-  // 5d. 邻近段落"半字重复"修复：Economist 等站点会把同一段落渲染两次（一份正常、
+  // 5d. 邻近段落"半字重复"修复：某些渲染异常会把同一段落渲染两次（一份正常、
   // 一份用缺失下行字符的字体或漏渲染），打印后并列出现 "ou marshal not merel ords"
   // 紧挨 "you marshal not merely words"。规则：mainEl 内同 parent 的两段
   // <p>，若一段是另一段的"破损子集"（长度短 ≥ 6 字符且非空字符在另一段中
@@ -928,7 +928,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   
   const LISTEN_PREFIX_RE = /^[^A-Za-z0-9]{0,6}\s*Listen\b/i;
   const LISTEN_TIME_RE = /\bListen\b[\s\S]{0,90}\b\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?)\b/i;// 5d.6 ghost 文本进阶兜底：扫 mainEl 内"短文本叶子"，找 Y 区间重叠且子序列
-  // 相似度 ≥ 0.75 的两块，隐藏更短/更破损的（Economist `ou marshal not merel
+  // 相似度 ≥ 0.75 的两块，隐藏更短/更破损的（
   // ords` 这种破损 ghost 不一定是 <p>，也未必同 parentNode）。
   if (mainEl) {
     const textLeaves = Array.from(mainEl.querySelectorAll('p, div, li, span, blockquote'))
@@ -1085,7 +1085,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   insertHost.className = 'a4lp-source';
 
   // 7a-pre. 找一张封面 hero 图：扫描范围扩展到 mainEl 的 <article> 祖先，
-  // 而不是仅 mainEl —— CNN 等站点把真正的现场照片放在 .article__content-container
+  // 而不是仅 mainEl —— 部分站点把真正的现场照片放在 .article__content-container
   // 之外（例如 .article__hero），mainEl 扫不到，结果只剩文末的 cnn-fallback-image.jpg
   // 被当成 hero。同时把 fallback / default / share-image / og-image 等
   // 站点占位图明确加入黑名单。
