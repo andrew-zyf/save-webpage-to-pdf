@@ -11,10 +11,10 @@
 | `manifest.json` | MV3 清单：权限、commands、service worker、icons | — |
 | `background.js` | service worker。注册右键菜单、监听 `chrome.commands.onCommand`，调 `runFlow()` 注入脚本到当前 tab | `runFlow(tabId, options)` |
 | `popup.html` / `popup.js` | 弹窗 UI：单按钮 + 快捷键提示。点击触发 `runFlow()` | `bind('pdf', handler)` |
-| `flow.js` | 抽取 + 标记 + 打印一条流水线，所有调用入口共用。约 2000 行 | `window.__a4lpStart(options)` → `pdfFlow()` |
-| `print.css` | 原打印路径用：`@page`、字体、防跨页、站点 scope 覆盖 | — |
+| `flow.js` | 抽取 + 标记 + 打印一条流水线，所有调用入口共用。~1700 行 | `window.__a4lpStart(options)` → `pdfFlow()` |
+| `print.css` | 打印路径用：`@page`、字体、防跨页、站点 scope 覆盖 | — |
 | `icons/` | 16 / 48 / 128 px 工具栏图标 | — |
-| `examples/` | 7 份归档样张 PDF | — |
+| `examples/` | 归档样张 PDF | — |
 
 `runFlow()` 在三处被复用：`popup.js`、`background.js` 的 `chrome.contextMenus.onClicked`、`background.js` 的 `chrome.commands.onCommand`。任何触发途径都走同一条流水线。
 
@@ -35,23 +35,22 @@
 | 0c | 超大图压缩 | > 260 万像素或 > 1800px 宽的图重采样到目标列宽 × 1.8，重编码 JPEG。逻辑图（含 logo/icon/chart/diagram 关键词）走更保守阈值 | `compressHugeImage(img)` |
 | 0d | 字体就绪 | `await document.fonts.ready`，1.5s 超时 | step 0d |
 | 1  | 内容抽取 | 调 `pickContent()` 拿 `titleEl / mainEl / commentEls / authorText / authorBios / safeKeep` 等 | `pickContent(SITE_RULES)` |
-| 1.5| 站点 flag | `isWSJ / isNY / isEconomist / isFA / isCNN / isCarnegie / isCSIS`，并在 `body` 加 `a4lp-site-<host>` class | step 1 末尾 |
-| 1.5| 前/尾噪声裁剪 | `FRONT_MATTER_TEXT` / `TAIL_START_TEXT`（站点条件分支）+ `hideLeadMatches()` / `stripFromMarker()` | 同名常量 + helper |
+| 1.5| 站点 flag | `isWSJ`，并在 `body` 加 `a4lp-site-<host>` class | step 1 末尾 |
+| 1.5| 前/尾噪声裁剪 | `FRONT_MATTER_TEXT` / `TAIL_START_TEXT` + `hideLeadMatches()` / `stripFromMarker()` | 同名常量 + helper |
 | 2  | 隐藏小漂浮 fixed | `position: fixed` 且面积 < 30% 视口的元素打 `.a4lp-hide` | step 2 inline |
 | 3  | 站点 extraRemove | 跑 `SITE_RULES[host].extraRemove` 选择器，全部打 `.a4lp-hide` | step 3 |
 | 4  | 广告占位文字 | 短文本节点匹配 `AD_LABEL_RE`（"advertisement / 赞助 / 广告"等）打 `.a4lp-hide` | `AD_LABEL_RE` |
 | 4b | 打印版权 / URL 回显裁剪 | "this copy is for your personal..." / WSJ reprints 等版权字段打 `.a4lp-hide`；当前页 URL 回显也清掉 | step 4b |
 | 5  | 工具条按钮裁剪 | 5a 显式容器（ToolBar/ShareTools 等 class）；5b 文本 / aria-label 按 `ACTION_RE` 匹配 | `ACTION_RE` |
 | 5d | 段落 ghost 修复 | 邻近段落子序列重叠 ≥ 0.75 视为半字重复，藏短的那段 | `isSubsequenceOverlap()` |
-| 5d.5 | Listen 兜底扫除 | 前缀匹配 `/^Listen/i` + 时长 + 短文本；NY 走结构选择器更激进 | `sweepListen()` |
+| 5d.5 | Listen 兜底扫除 | 前缀匹配 `/^Listen/i` + 时长 + 短文本 | step 5d.5 inline |
 | 5d.6 | 子序列 ghost 二次扫除 | 扫 `mainEl` 内短叶子，Y 区间重叠且子序列 ≥ 0.75 隐藏更短一份 | step 5d.6 inline |
 | 5c | 文末 recirc 卡 | 跑 `RECIRC_RE`（"Related/Recommended/Read Next..."）+ `looksLikeRecirculation()` 启发式 | `looksLikeRecirculation()` |
 | 6  | keep-path 兜底 | 把 `mainEl / titleEl / commentEls / safeKeep` 到 `<body>` 路径上的祖先链所有兄弟打 `.a4lp-hide` | step 6 inline |
-| 7  | 封面注入 | hero 图 / hero caption / 作者卡 / 目录 拼到 `.a4lp-source` 容器并 prepend 到 `<body>` | step 7a–7b |
-| 7e | hero 重复隐藏 | CSIS / Carnegie：mainEl 内首图与封面 hero 视觉一致，藏掉避免页 1 + 页 2 重复 | step 7e |
+| 7  | 封面注入 | hero 图 / hero caption / 作者卡 拼到 `.a4lp-source` 容器并 prepend 到 `<body>` | step 7a–7b |
 | 8  | 图 + caption 成组 | 裸 `<img>` 后紧邻 caption-like 兄弟（figcaption / em / small / 含 caption-class）包成 `.a4lp-keep` | step 8 |
 | 8b | SVG 图标 / 图表分流 | 按 viewBox / 容器上下文分类，加 `.a4lp-svg-icon` 或 `.a4lp-svg-graphic` | step 8b |
-| 9  | 打印分发 + cleanup | Economist 走 `printViaIframe()`，其他站走 `window.print()`；`afterprint` 触发 `cleanup()` | `cleanup()`、`printViaIframe()` |
+| 9  | 打印 + cleanup | `window.print()`；`afterprint` 触发 `cleanup()` | `cleanup()` |
 
 ---
 
@@ -63,7 +62,7 @@
 | --- | --- | --- |
 | `.a4lp-hide` | step 1.5–6 各处 | 该节点不出现在打印输出。`print.css` 全局 `display: none !important`。可叠加 |
 | `.a4lp-keep` | step 8 / 站点规则 | 「图 + caption」成组容器，`break-inside: avoid` |
-| `.a4lp-source` | step 7（`insertHost`） | 注入封面 / 目录 / 作者卡的根容器。打印时受站点规则豁免（不进 keep-path 隐藏） |
+| `.a4lp-source` | step 7（`insertHost`） | 注入封面 / 作者卡的根容器。打印时受站点规则豁免（不进 keep-path 隐藏） |
 | `.a4lp-safe` | step 1 末尾，由 `SITE_RULES[host].safeKeep` 选择器命中 | 全程豁免一切隐藏逻辑（防止 keep-path 误伤站点核心节点） |
 | `.a4lp-main` | step 1 末尾，加在 `mainEl` | 标记正文容器。`print.css` 围绕这个 class 应用列宽 / 字号 |
 | `.a4lp-comments` | step 1 末尾，加在 `keptCommentEls` 上 | 标记评论容器 |
@@ -80,19 +79,19 @@
 
 ## 4. 抽取器（`flow.js::pickContent()`）
 
-### 4.1 `SITE_RULES` schema
+### 4.1 WSJ 站点规则
+
+`SITE_RULES` 当前只包含 `wsj.com` 一条规则。在非 WSJ 页面上（通过右键菜单或快捷键触发），所有抽取逻辑走通用 fallback。
 
 ```js
-'<host>': {
-  main: '<正文容器选择器>',          // 必填
-  title: 'h1, ...',                  // 必填，多个用逗号
-  author: '<byline 选择器>',         // 选填
-  authorBio: '<作者卡选择器>',       // 选填
-  authorBioEls?,                     // 内部用，不要手填
-  comments?: '<评论容器选择器>',     // 选填，WSJ spotim
-  safeKeep?: '<完全豁免选择器>',     // 选填，避免 WSJ figure 被 keep-path 误伤
-  disable?: ['toc' | 'figureGroup' | 'keepPath' | 'extraRemove' | 'fixedHide' | 'adText' | 'actionButton' | 'trailingCardStrip'],
-  extraRemove?: '<额外噪声选择器>'   // 选填
+'wsj.com': {
+  main: 'article[itemtype*="NewsArticle"], article, ...',
+  title: 'h1[itemprop="headline"], h1',
+  author: '[itemprop="author"], [class*="Byline"], ...',
+  authorBio: '[class*="author-bio"], ...',
+  comments: '[id*="spotim"], ...',
+  safeKeep: 'article figure:has(img), ...',
+  extraRemove: '[data-module-id*="related" i], aside, footer, ...'
 }
 ```
 
@@ -115,7 +114,7 @@ score = sum(<p>.innerText.length) - 0.7 * sum(<a>.innerText.length) - 50 * max(0
 3. schema.org `[itemprop=author] [itemprop=name]` / `[itemprop=author]`
 4. byline 启发式：`mainEl` 内的 `[rel=author]` / `.byline` / `[class*=byline]`
 
-`cleanAuthor()` 清洗 `By / Story by / 作者 / 文：` 前缀，剥掉文末 "Updated" / "min read" / 发表日期。`isPublicationName()` 防止把 "WSJ" / "The New Yorker" 当作者。
+`cleanAuthor()` 清洗 `By / Story by / 作者 / 文：` 前缀，剥掉文末 "Updated" / "min read" / 发表日期。`isPublicationName()` 防止把 "WSJ" / "The Wall Street Journal" 当作者。
 
 ### 4.4 作者 bio
 
@@ -125,9 +124,8 @@ score = sum(<p>.innerText.length) - 0.7 * sum(<a>.innerText.length) - 50 * max(0
 
 优先级（`coverHeroSrc` / `coverHeroEl`）：
 
-1. Carnegie 例外：先用 `og:image`（避免 hero 误命中正文里的图表）
-2. 扫 `heroSearchScope`（mainEl 最近的 `<article>` 祖先，或 `document.querySelector('article, main')`）。每张候选打分：在 `<figure>` 内 +40、在 mainEl 内 +25、紧贴标题下方 +35、面积加分（封顶 +40）；命中 `HERO_REJECT_RE`（logo/icon/placeholder）或 `HERO_GRAPHIC_RE`（chart/figure 1 等）直接出局
-3. 兜底：`metaHeroSrc`（og:image / twitter:image / link[rel=image_src]）
+1. 扫 `heroSearchScope`（mainEl 最近的 `<article>` 祖先，或 `document.querySelector('article, main')`）。每张候选打分：在 `<figure>` 内 +40、在 mainEl 内 +25、紧贴标题下方 +35、面积加分（封顶 +40）；命中 `HERO_REJECT_RE`（logo/icon/placeholder）或 `HERO_GRAPHIC_RE`（chart/figure 1 等）直接出局。WSJ 还会用 `WSJ_HERO_REJECT_RE` 排除购物/推荐等非新闻图片。
+2. 兜底：`metaHeroSrc`（og:image / twitter:image / link[rel=image_src]）
 
 `coverHeroEl` 不为空时还会抽取 figcaption / 邻近 caption-class / `alt`（≥16 字符），渲染到封面 hero 图正下方的 `.a4lp-cover-hero-caption`。
 
@@ -135,7 +133,7 @@ score = sum(<p>.innerText.length) - 0.7 * sum(<a>.innerText.length) - 50 * max(0
 
 ## 5. 打印器
 
-### 5.1 原路径（其他 6 站）
+### 5.1 打印路径
 
 ```
 flow.js → window.print() → 浏览器加载 print.css 的 @media print 规则 → 用户保存 PDF
@@ -147,23 +145,7 @@ flow.js → window.print() → 浏览器加载 print.css 的 @media print 规则
 - 所有规则都套 `body.a4lp-print-root` 前缀，避免站点 dark mode 把背景印成深灰
 - 站点专属覆盖用 `body.a4lp-print-root.a4lp-site-<host>` 前缀
 
-### 5.2 iframe 沙箱（`flow.js::printViaIframe()`，仅 Economist）
-
-```
-flow.js → 建隐藏 <iframe> → 写空白 HTML →
-  注入 IFRAME_CSS（自包含，~140 行，定义见 flow.js 顶部）→
-  clone insertHost（封面）+ mainEl（正文）进 iframe.body →
-  剥光 clone 子树非 a4lp-* 的 class / id / data-* / style →
-  等 iframe.images 加载 + iframe.fonts.ready →
-  iframe.contentWindow.print() →
-  afterprint：移除 iframe + cleanup()
-```
-
-为什么这么做：Economist 出现 Skia 印模式 ghost paint（同一行字同时画在前页底部 + 后页顶部）。试过 `display: table` / `widows: 99` / `contain: paint` / 离屏 clone 测量 + 强制 `break-before: page`，Chrome 印模式总能绕开。最后用 iframe 完全脱离站点 CSS / 字体 / 动画 / aria-hidden 干扰，clean DOM 走 print 不再触发 ghost paint。
-
-为什么仅 Economist：其他 6 站在 iframe 路径下出现配图问题（图片 clone 逻辑还需加固，`<picture>` codec / blob URL 跨 iframe / hero 抽取的 srcset 等）。
-
-### 5.3 cleanup（`pdfFlow()::cleanup()`）
+### 5.2 cleanup（`pdfFlow()::cleanup()`）
 
 `afterprint` 监听一次。两件事：
 
@@ -176,19 +158,32 @@ flow.js → 建隐藏 <iframe> → 写空白 HTML →
 
 | 需求 | 落点 | 作用域写法 |
 | --- | --- | --- |
-| 改抽取（标题 / 作者 / 正文容器 / 移除选择器） | `flow.js::SITE_RULES['<host>']` | 仅匹配该 host |
-| 改前言 / 文末杂项裁剪文本 | `flow.js::FRONT_MATTER_TEXT` / `TAIL_START_TEXT` 站点条件分支 | `...(isXxx ? [/regex/] : [])` |
-| 改打印样式（字号 / 间距 / 分页 / 隐藏） | `print.css` 末尾追加规则 | `body.a4lp-print-root.a4lp-site-<host>` 前缀 |
-| 改 DOM 行为（移图 / 重排 / 特殊清洗） | `flow.js` 中加 `if (isXxx) { ... }` 块 | 仅在该站执行 |
-| 改 iframe 沙箱样式（仅 Economist） | `flow.js::IFRAME_CSS` 字符串 | 自包含，不依赖 `print.css` |
+| 改抽取（标题 / 作者 / 正文容器 / 移除选择器） | `flow.js::SITE_RULES['wsj.com']` | 仅匹配 wsj.com |
+| 改前言 / 文末杂项裁剪文本 | `flow.js::FRONT_MATTER_TEXT` / `TAIL_START_TEXT` | 当前为空数组 |
+| 改打印样式（字号 / 间距 / 分页 / 隐藏） | `print.css` 末尾追加规则 | `body.a4lp-print-root.a4lp-site-wsj-com` 前缀 |
+| 改 DOM 行为（移图 / 重排 / 特殊清洗） | `flow.js` 中加 `if (isWSJ) { ... }` 块 | 仅在 WSJ 页面执行 |
 
-`a4lp-site-<host>` 类名由 `flow.js` 在 `<body>` 上自动打：host 中的 `.` 替换成 `-`，转小写。例：`economist.com` → `a4lp-site-economist-com`。
+`a4lp-site-<host>` 类名由 `flow.js` 在 `<body>` 上自动打：host 中的 `.` 替换成 `-`，转小写。例：`wsj.com` → `a4lp-site-wsj-com`。
 
 ---
 
-## 7. 新增一个站点
+## 7. WSJ 专属逻辑
 
-1. **加规则**：在 `flow.js::SITE_RULES` 里按 host 字母序加一条：
+| 阶段 | 逻辑 | 关键 symbol |
+| --- | --- | --- |
+| step 1 末尾 | `safeKeep` 豁免 figure，防止 keep-path 误伤 | `SITE_RULES['wsj.com'].safeKeep` |
+| step 1 末尾 | 隐藏 author-bio / bylineBio / contributor 容器 | `isWSJ` 分支 |
+| step 1.5 | `isSupplementalNode` WSJ 专属正则（up next / videos / continue to article / Buy Side / Dow Jones copyright / hash 等） | `isWSJ && /^(up next\|...)/` |
+| step 5d.6 | ghost 二次扫除 | step 5d.6 inline |
+| step 7a-pre | hero 排除购物/推荐图片（`WSJ_HERO_REJECT_RE`） | `WSJ_HERO_REJECT_RE` |
+| step 7a-pre | hero 排除正文补充图（`isSupplementalImageCandidate`） | `isSupplementalImageCandidate` |
+| step 8+ | `buildReconstructedMain()` 生成干净正文（去 byline/copyright/hash/ghost），仅 WSJ 启用 | `isWSJ ? buildReconstructedMain(mainEl) : null` |
+
+---
+
+## 8. 新增一个站点
+
+1. **加规则**：在 `flow.js::SITE_RULES` 里加一条：
    ```js
    '<host>': {
      main: '<正文容器选择器>',
@@ -204,23 +199,9 @@ flow.js → 建隐藏 <iframe> → 写空白 HTML →
 
 ---
 
-## 8. 现存站点专属逻辑
-
-| 站点 | 抽取 / 清洗（`flow.js`） | 打印样式（`print.css`） |
-| --- | --- | --- |
-| `carnegieendowment.org` | hero 走 `og:image`（step 7 hero 选择头部）；正文容器内首图隐藏（step 7e） | — |
-| `cnn.com` | CDN 缩略占位识别（`isLikelyPlaceholderImage` 内 `isCNN` 分支） | — |
-| `csis.org` | 正文容器内首图隐藏（step 7e） | — |
-| `economist.com` | `moveEconomistPreLeadToCover()`（前言搬到封面）；段落 ghost 字符相似度去重（step 5d / 5d.6）；**iframe 沙箱打印路径**（`printViaIframe()`） | — |
-| `foreignaffairs.com` | `FA_AUTHOR_BIO_RE`（作者 bio 启发式 + tail 清理） | 正文字号下调 36% |
-| `newyorker.com` | `sweepListen()` / `hideNYPreLeadWidgets()`（Listen 控件结构清扫） | Listen 控件结构兜底；正文字号 12pt（≈ 16px） |
-| `wsj.com` | `safeKeep` 豁免 figure；`extraRemove` 清 WhatToReadNext / MoreFromWSJ / 文末 reprints | — |
-
----
-
 ## 9. 全站默认行为（不要轻易改这层）
 
-下列规则没有站点 scope，是所有站点共享的"地基"。改这些会牵连所有站，加新规则前先看这里有没有已经覆盖你要的效果。
+下列规则没有站点 scope，是所有页面共享的"地基"。改这些会牵连所有页面，加新规则前先看这里有没有已经覆盖你要的效果。
 
 ### 9.1 排版（`print.css`）
 
@@ -250,7 +231,7 @@ flow.js → 建隐藏 <iframe> → 写空白 HTML →
 - 隐藏面积 < 视口 30% 的 `position: fixed` 元素（step 2）
 - 通用 byline / author-bio 选择器作为 fallback；广告占位（`adsbygoogle` / `[id*="ad-"]` 等）全站隐藏
 - 收听 / 分享 / 打印 / 订阅类按钮按 `ACTION_RE`（文本 + aria-label）匹配（step 5b）
-- 段落短文本子序列重叠 ≥ 0.75 视作 ghost（step 5d / 5d.6）—— 起源是 Economist 字体半加载问题，目前全站启用；其他站若误伤再收窄到 `if (isEconomist)`
+- 段落短文本子序列重叠 ≥ 0.75 视作 ghost（step 5d / 5d.6）
 
 ---
 
@@ -261,4 +242,3 @@ flow.js → 建隐藏 <iframe> → 写空白 HTML →
 - caption 检测基于启发式（标签 / 类名 / 长度），少数站点可能漏识别；图本身在 `<figure>` 内则始终生效。caption 过长时，图 + caption 组合仍可能超过单页高度被拆分
 - 站点自带 sticky / fixed 元素若占据视口 ≥ 30% 面积不会被自动隐藏
 - 跨域 iframe 内的图片不受样式控制
-- iframe 沙箱路径目前只在 Economist 启用，全量推广卡在配图 clone 问题
