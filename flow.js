@@ -603,8 +603,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     if (!text) return false;
     if (/^this copy is for your personal, non-commercial use only/i.test(text)) return true;
     if (/^(related content|recommended reading|see also|recirculation|recommendation|read next|what to read next|more to read)$/i.test(text)) return true;
-    if (/^(explore more|from the .* edition|discover stories from this section|more from [a-z].*|plot twist newsletter\b|this article appeared in the .* print edition|more work from carnegie endowment for international peace|acknowledgments|about the author|notes|more by\b|[^A-Za-z0-9]{0,3}\s*listen(?:\s*[•·|]\s*\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?))?)$/i.test(text)) return true;
-    if (/^carnegie does not take institutional positions on public policy issues/i.test(text)) return true;
+    if (/^(explore more|from the .* edition|discover stories from this section|more from [a-z].*|plot twist newsletter\b|this article appeared in the .* print edition|acknowledgments|about the author|notes|more by\b|[^A-Za-z0-9]{0,3}\s*listen(?:\s*[•·|]\s*\d+\s*(?:min(?:ute)?s?|sec(?:ond)?s?))?)$/i.test(text)) return true;
     if (isWSJ && /^(up next|videos|continue to article|click for sound|show conversation|write to\s|wsj\s*\|\s*buy side|reviews and recommendations|real estate insights|content provided by|alison sider writes about|ben cohen writes the|for non-personal use or to order multiple copies|copyright\s+©?\s*\d{4}\s+dow jones|©?\s*\d{4}\s+dow jones)/i.test(text)) return true;
     if (isWSJ && /^[a-f0-9]{24,}$/i.test(text)) return true;
     return false;
