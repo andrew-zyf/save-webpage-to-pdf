@@ -1,5 +1,7 @@
-// Auto-generated combined flow file. Safe to inject multiple times —— 每次都
-// 重新执行 IIFE 重写 window.__a4lpStart，避免扩展 reload 后老页面仍指向旧闭包。
+// Main content-extraction + print-pipeline for the Save WSJ Webpage to PDF
+// extension. Wrapped in IIFE for safe multi-inject — each call overwrites
+// window.__a4lpStart so stale closures from a previous extension load are
+// replaced.
 (function () {
 // ---- 站点规则白名单（按 host 字母序） ----
 const SITE_RULES = {
