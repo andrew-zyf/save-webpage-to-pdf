@@ -23,7 +23,6 @@ const SITE_RULES = {
       'article[itemtype*="NewsArticle"] [class*="Media" i]:has(img)',
       'article[itemtype*="NewsArticle"] [class*="media" i]:has(img)'
     ].join(', '),
-    disable: ['toc'],
     extraRemove: [
       // 听文 / 朗读 工具条
       '[aria-label*="Listen to article" i]',
@@ -560,13 +559,12 @@ async function pdfFlow(SITE_RULES, options = {}) {
     await withTimeout(document.fonts.ready, 1500);
   }
 
-  // 1. 抽取内容（标题/作者/作者介绍/正文/评论）+ 站点豁免（safeKeep / disable）
-  const { titleEl, mainEl, commentEls, extraRemove, authorText: extractedAuthorText, authorBios, authorBioEls, safeKeep, disable, rulesMatchedHost } = pickContent(SITE_RULES);
+  // 1. 抽取内容（标题/作者/作者介绍/正文/评论）+ 站点豁免（safeKeep）
+  const { titleEl, mainEl, commentEls, extraRemove, authorText: extractedAuthorText, authorBios, authorBioEls, safeKeep, rulesMatchedHost } = pickContent(SITE_RULES);
   let authorText = extractedAuthorText;
-  
+
   // 而它在 5d 阶段（line ~1039）就被调用，比下方"封面页"代码块更早。
   const titleText = (titleEl?.innerText || document.title || '').trim();
-  const off = (key) => Array.isArray(disable) && disable.includes(key);
   const isWSJ = rulesMatchedHost === 'wsj.com';
   if (rulesMatchedHost) {
     rememberClass(document.body, 'a4lp-site-' + rulesMatchedHost.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase());
@@ -632,7 +630,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
 
   // 2. 隐藏小漂浮 fixed
-  if (!off('fixedHide')) {
+  {
     const vw = window.innerWidth, vh = window.innerHeight;
     document.querySelectorAll('body *').forEach(el => {
       if (isSafe(el)) return;
@@ -645,7 +643,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
 
   // 3. 站点规则的 extraRemove
-  if (extraRemove && !off('extraRemove')) {
+  if (extraRemove) {
     document.querySelectorAll(extraRemove).forEach(el => {
       if (isSafe(el)) return;
       el.classList.add('a4lp-hide');
@@ -653,7 +651,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
 
   // 4. 广告占位文字
-  if (!off('adText')) {
+  {
     const AD_LABEL_RE = /^\s*(advertisement|sponsored(\s+content)?|promoted(\s+content)?|sponsor|广告|推广|赞助|赞助内容)\s*[:：]?\s*$/i;
     document.querySelectorAll('p, div, span, aside, section, small, label, figcaption').forEach(el => {
       if (isSafe(el)) return;
@@ -693,7 +691,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
 
   // 5. 收听/保存/打印/分享类按钮 + 工具条
-  if (!off('actionButton')) {
+  {
   // 5a. 显式工具条容器（icon-only 按钮没文字，必须靠选择器命中）
   const TOOLBAR_SELECTORS = [
     '[class*="ActionBar" i]', '[class*="action-bar" i]',
@@ -751,7 +749,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     }
     target.classList.add('a4lp-hide');
   });
-  } // /actionButton
+  } // /actionButton section
 
   const bubbleHideTarget = (el, maxFactor = 2.8, hardMax = 900) => {
     let target = el;
@@ -969,8 +967,8 @@ async function pdfFlow(SITE_RULES, options = {}) {
   
 
   // 5c. 文末卡片条清理：仅清理 mainEl 内、正文尾部之后的明显 recirc 模块，
-  // 不再按“最后一个长段落之后全部隐藏”的方式截断，避免误删合法短结尾。
-  if (mainEl && !off('trailingCardStrip')) {
+  // 不再按”最后一个长段落之后全部隐藏”的方式截断，避免误删合法短结尾。
+  if (mainEl) {
     const substantive = [];
     mainEl.querySelectorAll('p, blockquote, figure, li, h2, h3, h4, pre, table').forEach(el => {
       if (isSupplementalNode(el)) return;
@@ -1019,7 +1017,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
   }
 
   // 6. keep-path：保留 title/main/comments/safeKeep 路径，隐藏其他兄弟
-  if (!off('keepPath')) {
+  {
     const keepRoots = new Set();
     if (mainEl) keepRoots.add(mainEl);
     if (titleEl && !(mainEl && mainEl.contains(titleEl))) {
@@ -1249,47 +1247,7 @@ async function pdfFlow(SITE_RULES, options = {}) {
     escapeHtml(location.href) +
     '</a></div>';
 
-  // 7b. 自动目录：短目录内联；长目录独立分页
-  const TOC_BLACKLIST_RE = /^(related content|recommended reading|see also|recirculation|recommendation|read next|what to read next|more to read|more from [a-z].*|more work from\b|explore more|tags?|share this|sign up|subscribe|newsletter|comments?|related articles?|further reading)$/i;
-  const headings = mainEl ? Array.from(mainEl.querySelectorAll('h1, h2, h3')).filter(h => {
-    if (h === titleEl) return false;
-    if (h.closest('.a4lp-hide')) return false;
-    if (isSupplementalNode(h)) return false;
-    const text = (h.innerText || '').trim();
-    if (!text) return false;
-    if (TOC_BLACKLIST_RE.test(text)) return false;
-    return true;
-  }) : [];
-  const firstBodyP = mainEl ? Array.from(mainEl.querySelectorAll('p')).find(p => {
-    if (p.closest('.a4lp-hide') || isSupplementalNode(p)) return false;
-    return (p.innerText || '').trim().length >= 100;
-  }) : null;
-  const headingChars = headings.reduce((sum, h) => sum + (h.innerText || '').trim().length, 0);
-  const tocMinHeadings = 3;
-  const separateToc = headings.length > 8 || headingChars > 280;
-  const renderToc = () => {
-    if (off('toc')) return '';
-    if (headings.length < tocMinHeadings) return '';
-    let tocHtml = '<nav class="a4lp-toc"><div class="a4lp-toc-h">目录 / Contents</div><ul>';
-    let slug = 0;
-    headings.forEach(h => {
-      if (firstBodyP && (h.compareDocumentPosition(firstBodyP) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
-      if (h.closest('a') || h.querySelector('a')) return;
-      if (!h.id) h.id = 'a4lp-toc-' + (++slug);
-      const lvl = Number(h.tagName[1]);
-      tocHtml += '<li class="a4lp-toc-l' + lvl + '"><a href="#' + h.id + '">' + escapeHtml((h.innerText || '').trim()) + '</a></li>';
-    });
-    tocHtml += '</ul></nav>';
-    return tocHtml.includes('<li ') ? tocHtml : '';
-  };
-  const tocHtml = renderToc();
-  if (tocHtml && !separateToc) {
-    html += tocHtml;
-  }
   html += '</section>'; // 关闭 .a4lp-cover
-  if (tocHtml && separateToc) {
-    html += '<section class="a4lp-toc-page">' + tocHtml + '</section>';
-  }
 
   insertHost.innerHTML = html;
   document.body.insertBefore(insertHost, document.body.firstChild);
@@ -1307,17 +1265,14 @@ async function pdfFlow(SITE_RULES, options = {}) {
     paragraphCount: mainEl?.querySelectorAll('p').length || 0,
     author: authorText,
     authorBioCount: authorBios?.length || 0,
-    headingCount: headings.length,
     commentContainers: keptCommentEls.length,
     layoutMode,
-    separateToc,
     siteRulesHit: rulesMatchedHost || '(generic)',
-    safeKeep: safeKeep || '(none)',
-    disabled: Array.isArray(disable) && disable.length ? disable.join(',') : '(none)'
+    safeKeep: safeKeep || '(none)'
   });
 
   // 8. 图+caption 成组
-  if (off('figureGroup')) { /* skip */ } else {
+  {
   const isCaption = (el) => {
     if (!el || el.nodeType !== 1) return false;
     const text = (el.textContent || '').trim();
@@ -1752,7 +1707,6 @@ async function pdfFlow(SITE_RULES, options = {}) {
       authorBioEls: bioEls,
       authorText, authorBios: dedupBios,
       safeKeep: rules?.safeKeep || '',
-      disable: Array.isArray(rules?.disable) ? rules.disable : [],
       rulesMatchedHost
     };
   }
